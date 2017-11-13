@@ -41,7 +41,7 @@ def load_vgg(sess, vgg_path):
     layer3_out = sess.graph.get_tensor_by_name(vgg_layer3_out_tensor_name)
     layer4_out = sess.graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
     layer7_out = sess.graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
-	
+
     return image_input, keep_prob, layer3_out, layer4_out, layer7_out
     
 	
@@ -130,15 +130,30 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     learning_rate_stat = 1e-4
     #g_iou,_ = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),num_classes)
     for epoch in range(epochs):
-        for image, label in get_batches_fn(batch_size):
+        avg_loss = 0
+        n = 0
+        for image, label in get_batches_fn(batch_size, get_train=True):
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict={input_image: image,
                                           correct_label: label,
                                           keep_prob: keep_prob_stat,
                                           learning_rate:learning_rate_stat})
             #iou = sess.run(g_iou)
-            print("Epoch %d of %d: Training loss: %.4f" %(epoch+1, epochs, loss))
-        print("Epoch %d of %d: Training loss: %.4f" %(epoch+1, epochs, loss))
+            avg_loss = (avg_loss * n + loss) / (n+1)
+            n += 1
+            print("Epoch %d of %d: Batch loss %.4f, Avg Training loss: %.4f" %(epoch+1, epochs, loss, avg_loss))
+        print("Epoch %d of %d: Final Training loss: %.4f" %(epoch+1, epochs, avg_loss))
+        for image, label in get_batches_fn(batch_size, get_train=False):
+            _, loss = sess.run([cross_entropy_loss],
+                               feed_dict={input_image: image,
+                                          correct_label: label,
+                                          keep_prob: keep_prob_stat,
+                                          learning_rate: learning_rate_stat})
+            # iou = sess.run(g_iou)
+            avg_loss = (avg_loss * n + loss) / (n + 1)
+            n += 1
+            print("Epoch %d of %d: Val loss %.4f" % (epoch + 1, epochs, avg_loss))
+
 tests.test_train_nn(train_nn)
 
 
