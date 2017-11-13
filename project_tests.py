@@ -115,7 +115,7 @@ def test_train_nn(train_nn):
     epochs = 1
     batch_size = 2
 
-    def get_batches_fn(batach_size_parm):
+    def get_batches_fn(batach_size_parm, get_train):
         shape = [batach_size_parm, 2, 3, 3]
         return np.arange(np.prod(shape)).reshape(shape)
 
