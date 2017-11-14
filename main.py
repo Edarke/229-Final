@@ -6,9 +6,9 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
-
 # Check TensorFlow Version
-assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
+assert LooseVersion(tf.__version__) >= LooseVersion(
+    '1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
 print('TensorFlow Version: {}'.format(tf.__version__))
 
 # Check for a GPU
@@ -27,7 +27,7 @@ def load_vgg(sess, vgg_path):
     """
     # TODO: Implement function
     #   Use tf.saved_model.loader.load to load the model and weights
-	#return None, None, None, None, None
+    # return None, None, None, None, None
 
     vgg_tag = 'vgg16'
     vgg_input_tensor_name = 'image_input:0'
@@ -59,25 +59,32 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-	#return None
+    # return None
 
 
-    conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1,
+                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     # transposed convolutions - upsample by 2
-    deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4,2, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    #deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4, 2, 'SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    # deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     # skip connection to previous VGG layer
-    skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
 
     # Upsample by 2
-    deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
 
     # Upsample by 8 (three pooling layers in VGG encoder)
-    deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     return deconv_3
+
 
 tests.test_layers(layers)
 
@@ -92,9 +99,9 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
     # TODO: Implement function
-    #return None, None, None
+    # return None, None, None
 
-	# define logits and labels
+    # define logits and labels
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
     labels = tf.reshape(correct_label, (-1, num_classes))
     # loss function
@@ -105,6 +112,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     train_op = optimizer.minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
+
 
 tests.test_optimize(optimize)
 
@@ -125,14 +133,16 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-    #pass
-    #global g_iou
+    # pass
+    # global g_iou
+    patience = 1
     keep_prob_stat = 0.8
     learning_rate_stat = 1e-4
-    #g_iou,_ = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),num_classes)
+    # g_iou,_ = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),num_classes)
 
     # Write metrics to data.txt for plotting later.
     with open("data.txt", "w") as data:
+        val_loss_history = [float("inf")]
         for epoch in range(epochs):
             avg_loss = 0
             n = 0
@@ -141,44 +151,46 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                                    feed_dict={input_image: image,
                                               correct_label: label,
                                               keep_prob: keep_prob_stat,
-                                              learning_rate:learning_rate_stat})
-                #iou = sess.run(g_iou)
-                avg_loss = (avg_loss * n + loss) / (n+1)
+                                              learning_rate: learning_rate_stat})
+                # iou = sess.run(g_iou)
+                avg_loss = (avg_loss * n + loss) / (n + 1)
                 n += 1
                 # Overwrite last line of stdout on linux. Not sure if this works on windows...
-                print("Epoch %d of %d: Batch loss %.4f, Avg Training loss: %.4f\r" %(epoch+1, epochs, loss, avg_loss),end="")
-            print("\nEpoch %d of %d: Final Training loss: %.4f" %(epoch+1, epochs, avg_loss))
+                print("Epoch %d of %d: Batch loss %.4f, Avg loss: %.4f\r" % (epoch + 1, epochs, loss, avg_loss), end="")
+            print("\nEpoch %d of %d: Final Training loss: %.4f" % (epoch + 1, epochs, avg_loss))
 
             val_loss = 0
             n = 0
             for image, label in get_batches_fn(batch_size, get_train=False):
                 loss, = sess.run([cross_entropy_loss],
-                                   feed_dict={input_image: image,
-                                              correct_label: label,
-                                              keep_prob: keep_prob_stat,
-                                              learning_rate: learning_rate_stat})
+                                 feed_dict={input_image: image,
+                                            correct_label: label,
+                                            keep_prob: keep_prob_stat,
+                                            learning_rate: learning_rate_stat})
 
                 val_loss = (val_loss * n + loss) / (n + 1)
                 n += 1
+            print("%d\t%f\t%f" % (epoch + 1, avg_loss, val_loss), file=data)
             print("Epoch %d of %d: Val loss %.4f" % (epoch + 1, epochs, val_loss))
-            # Print losses to stderr in format plottable by gnuplot or something.
-            print("%d\t%f\t%f" % (epoch+1, avg_loss, val_loss), file=data)
-        #sess.run(g_iou)
-
+            val_loss_history.append(val_loss)
+            if helper.early_stopping(val_loss_history, patience):
+                print("Early stopping. Min Val Loss:", min(val_loss_history))
+                break
+                # sess.run(g_iou)
 
 
 tests.test_train_nn(train_nn)
 
 
 def run():
-    #global g_iou
-    #global g_iou_op
+    # global g_iou
+    # global g_iou_op
     image_shape = (160, 576)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
-    epochs = 10
+    epochs = 50
     batch_size = 2
     num_classes = 2
     # Download pretrained vgg model
@@ -206,17 +218,18 @@ def run():
 
         # TODO: where does logits get used?`
         logits, train_op, cross_entropy_loss = optimize(last_layer, correct_label, learning_rate, num_classes)
-        g_iou, g_iou_op = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),num_classes)
-
+        g_iou, g_iou_op = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),
+                                              num_classes)
 
         # TODO: Train NN using the train_nn function
         sess.run(tf.global_variables_initializer())
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, image_input, correct_label, keep_prob, learning_rate)
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, image_input, correct_label,
+                 keep_prob, learning_rate)
 
-        #iou = sess.run(g_iou)
-        #print("IOU: %.4f" %(iou))
+        # iou = sess.run(g_iou)
+        # print("IOU: %.4f" %(iou))
 
-        #print("g_iou",sess.run(g_iou, g_iou_op))
+        # print("g_iou",sess.run(g_iou, g_iou_op))
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
