@@ -160,6 +160,11 @@ with tf.Session() as sess:
         #-----------------------------------------------------------------------
         feed = {validation_loss: validation_loss_total,
                 training_loss:   training_loss_total}
+
+        print ("validation loss")
+        print (str(validation_loss_total))
+        print ("training loss")
+        print (str(training_loss_total))
         loss_summary = sess.run([validation_loss_summary_op,
                                  training_loss_summary_op],
                                 feed_dict=feed)

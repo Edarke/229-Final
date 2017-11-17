@@ -1,0 +1,150 @@
+ubuntu@ip-172-31-12-124:~/project/229-Final/image-seg-fcn$ python3 train.py --data-dir kitti/ --epochs 10 --batch-size 2 --name exp/10epoch_2batchsize
+[i] Project name:          exp/10epoch_2batchsize
+[i] Data source:           kitti
+[i] Data directory:        kitti/
+[i] VGG directory:         vgg_graph
+[i] # epochs:              10
+[i] Batch size:            2
+[i] Tensorboard directory: tb
+[i] Checkpoint interval:   50
+[i] Creating directory exp/10epoch_2batchsize...
+[i] Configuring data source...
+[i] # training samples:    261
+[i] # validation samples:  28
+[i] # classes:             2
+[i] Image size:            (576, 160)
+2017-11-17 00:56:33.029503: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX2 instructions, but these are available on your machine and could speed up CPU computations.
+2017-11-17 00:56:33.029539: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use FMA instructions, but these are available on your machine and could speed up CPU computations.
+2017-11-17 00:56:33.159311: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.159988: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 0 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:17.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.160549: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x34594f0
+2017-11-17 00:56:33.239653: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.240306: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 1 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:18.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.240840: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x345d1d0
+2017-11-17 00:56:33.321698: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.322336: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 2 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:19.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.322891: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x3460eb0
+2017-11-17 00:56:33.405025: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.405661: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 3 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:1a.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.406206: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x3464b90
+2017-11-17 00:56:33.490430: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.491066: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 4 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:1b.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.491600: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x3468870
+2017-11-17 00:56:33.577689: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.578316: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 5 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:1c.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.578879: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x346c550
+2017-11-17 00:56:33.666777: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.667375: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 6 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:1d.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.667920: W tensorflow/stream_executor/cuda/cuda_driver.cc:485] creating context when one is currently active; existing: 0x3470230
+2017-11-17 00:56:33.759467: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:901] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2017-11-17 00:56:33.760044: I tensorflow/core/common_runtime/gpu/gpu_device.cc:887] Found device 7 with properties: 
+name: Tesla K80
+major: 3 minor: 7 memoryClockRate (GHz) 0.8235
+pciBusID 0000:00:1e.0
+Total memory: 11.25GiB
+Free memory: 11.13GiB
+2017-11-17 00:56:33.763059: I tensorflow/core/common_runtime/gpu/gpu_device.cc:908] DMA: 0 1 2 3 4 5 6 7 
+2017-11-17 00:56:33.763082: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 0:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763091: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 1:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763098: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 2:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763106: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 3:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763113: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 4:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763120: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 5:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763128: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 6:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763135: I tensorflow/core/common_runtime/gpu/gpu_device.cc:918] 7:   Y Y Y Y Y Y Y Y 
+2017-11-17 00:56:33.763157: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:0) -> (device: 0, name: Tesla K80, pci bus id: 0000:00:17.0)
+2017-11-17 00:56:33.763171: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:1) -> (device: 1, name: Tesla K80, pci bus id: 0000:00:18.0)
+2017-11-17 00:56:33.763180: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:2) -> (device: 2, name: Tesla K80, pci bus id: 0000:00:19.0)
+2017-11-17 00:56:33.763188: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:3) -> (device: 3, name: Tesla K80, pci bus id: 0000:00:1a.0)
+2017-11-17 00:56:33.763196: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:4) -> (device: 4, name: Tesla K80, pci bus id: 0000:00:1b.0)
+2017-11-17 00:56:33.763204: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:5) -> (device: 5, name: Tesla K80, pci bus id: 0000:00:1c.0)
+2017-11-17 00:56:33.763212: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:6) -> (device: 6, name: Tesla K80, pci bus id: 0000:00:1d.0)
+2017-11-17 00:56:33.763219: I tensorflow/core/common_runtime/gpu/gpu_device.cc:977] Creating TensorFlow device (/gpu:7) -> (device: 7, name: Tesla K80, pci bus id: 0000:00:1e.0)
+[i] Creating the model...
+[i] Training...
+[i] Epoch  1/10: 100%|██████████████████████████████████| 131/131 [01:30<00:00,  1.44batches/s]
+validation loss
+3.3260196788
+training loss
+35.8616526721
+[i] Epoch  2/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+2.16813516617
+training loss
+2.75604596175
+[i] Epoch  3/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+1.19912036402
+training loss
+1.72674280359
+[i] Epoch  4/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+1.03112258443
+training loss
+1.05704612453
+[i] Epoch  5/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+0.770318461316
+training loss
+0.723945374918
+[i] Epoch  6/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+0.879078541483
+training loss
+0.59327151732
+[i] Epoch  7/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+0.510754236153
+training loss
+0.505235975958
+[i] Epoch  8/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+0.458410687745
+training loss
+0.353322026659
+[i] Epoch  9/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+0.394501277379
+training loss
+0.276463343323
+[i] Epoch 10/10: 100%|██████████████████████████████████| 131/131 [01:26<00:00,  1.51batches/s]
+validation loss
+0.356849447425
+training loss
+0.228227380078
+Checkpoint saved: exp/10epoch_2batchsize/fin
