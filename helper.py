@@ -91,7 +91,7 @@ def gen_batch_function(data_folder, image_shape):
             for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
         background_color = np.array([255, 0, 0])
 
-        image_train, image_val = sk.train_test_split(image_paths, test_size=.2, shuffle=True, random_state=42)
+        image_train, image_val = sk.train_test_split(image_paths, test_size=.2, random_state=42)
         image_paths = image_train if get_train else image_val
         for batch_i in range(0, int(len(image_paths)), batch_size):
             images = []
