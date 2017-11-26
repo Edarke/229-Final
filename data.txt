@@ -1,0 +1,2 @@
+Epochs	Train Loss	Val Loss	Train Accuracy	Val Accuracy	Train iou	Val iou
+1	13.029648	9.481481	0.034413	0.034532	0.017508	0.017570

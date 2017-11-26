@@ -94,10 +94,13 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
     # define logits and labels
+    print(num_classes)
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
-    labels = tf.reshape(correct_label, (-1, num_classes))
+    labels = tf.to_int64(tf.reshape(correct_label, [-1]))
+    print(logits)
+    print(correct_label, labels)
     # loss function
-    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+    cross_entropy_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
     # Optimizer
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     # train_op = minimise loss
@@ -124,7 +127,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    
+    epochs = 1
     patience = 1
     keep_prob_stat = 0.6
     learning_rate_stat = 1e-4
@@ -144,18 +147,19 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             n = 0
             for image, label in get_batches_fn(batch_size, get_train=True):
                 _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
-                                   feed_dict={input_image: image,
-                                              correct_label: label,
-                                              keep_prob: keep_prob_stat,
-                                              learning_rate: learning_rate_stat})
-                
-                l = label.reshape(-1,2)
+                                           feed_dict={input_image: image,
+                                                      correct_label: label,
+                                                      keep_prob: keep_prob_stat,
+                                                      learning_rate: learning_rate_stat})
+
+                l = label.reshape(-1, 2)
                 true_pos = 0
                 false_pos = 0
                 false_neg = 0
                 true_neg = 0
                 for i in range(l.shape[0]):
-                    if (l[i,0]==True and ologit[i,0]>ologit[i,1]) or (l[i,1]==True and ologit[i,1]>ologit[i,0]):
+                    if (l[i, 0] == True and ologit[i, 0] > ologit[i, 1]) or (
+                            l[i, 1] == True and ologit[i, 1] > ologit[i, 0]):
                         true_pos += 1
                         true_neg += 1
                         true_pos_cuml += 1
@@ -165,18 +169,23 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                         false_neg += 1
                         false_pos_cuml += 1
                         false_neg_cuml += 1
-						
-                accuracy = (true_pos+true_neg)/(true_pos+false_pos+false_neg+true_neg)
-                iou = true_pos/(true_pos+false_pos+false_neg)
-                
+
+                accuracy = (true_pos + true_neg) / (true_pos + false_pos + false_neg + true_neg)
+                iou = true_pos / (true_pos + false_pos + false_neg)
+
                 avg_loss = (avg_loss * n + loss) / (n + 1)
-                avg_accuracy = (true_pos_cuml+true_neg_cuml)/(true_pos_cuml+false_pos_cuml+false_neg_cuml+true_neg_cuml)
-                avg_iou = true_pos_cuml/(true_pos_cuml+false_pos_cuml+false_neg_cuml)
+                avg_accuracy = (true_pos_cuml + true_neg_cuml) / (
+                true_pos_cuml + false_pos_cuml + false_neg_cuml + true_neg_cuml)
+                avg_iou = true_pos_cuml / (true_pos_cuml + false_pos_cuml + false_neg_cuml)
                 n += 1
-				
+
                 # Overwrite last line of stdout on linux. Not sure if this works on windows...
-                print("Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
-            print("\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
+                print(
+                    "Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
+                    epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
+            print(
+                "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
+                epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
 
             val_loss = 0
             val_accuracy = 0
@@ -188,31 +197,32 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             n = 0
             for image, label in get_batches_fn(batch_size, get_train=False):
                 loss, ologit = sess.run([cross_entropy_loss, logits],
-                                 feed_dict={input_image: image,
-                                            correct_label: label,
-                                            keep_prob: keep_prob_stat,
-                                            learning_rate: learning_rate_stat})
-			
-                l = label.reshape(-1,2)
+                                        feed_dict={input_image: image,
+                                                   correct_label: label,
+                                                   keep_prob: keep_prob_stat,
+                                                   learning_rate: learning_rate_stat})
+
+                l = label.reshape(-1, 2)
                 for i in range(l.shape[0]):
-                    if (l[i,0]==True and ologit[i,0]>ologit[i,1]) or (l[i,1]==True and ologit[i,1]>ologit[i,0]):
+                    if (l[i, 0] == True and ologit[i, 0] > ologit[i, 1]) or (
+                            l[i, 1] == True and ologit[i, 1] > ologit[i, 0]):
                         val_true_pos += 1
                         val_true_neg += 1
                     else:
                         val_false_pos += 1
                         val_false_neg += 1
-						
+
                 val_loss = (val_loss * n + loss) / (n + 1)
-                val_accuracy = (val_true_pos+val_true_neg)/(val_true_pos+val_false_pos+val_false_neg+val_true_neg)
-                val_iou = val_true_pos/(val_true_pos+val_false_pos+val_false_neg)
+                val_accuracy = (val_true_pos + val_true_neg) / (
+                val_true_pos + val_false_pos + val_false_neg + val_true_neg)
+                val_iou = val_true_pos / (val_true_pos + val_false_pos + val_false_neg)
                 n += 1
-            
-			
-            print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
-            print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (epoch + 1, epochs, val_loss, val_accuracy, val_iou))
-			
-			
-			
+
+            print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (
+                epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
+            print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (
+                epoch + 1, epochs, val_loss, val_accuracy, val_iou))
+
             val_loss_history.append(val_loss)
             if helper.early_stopping(val_loss_history, patience):
                 print("Early stopping. Min Val Loss:", min(val_loss_history))
@@ -220,7 +230,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 # sess.run(g_iou)
 
 
-#tests.test_train_nn(train_nn)
+# tests.test_train_nn(train_nn)
 
 
 def run():
@@ -233,7 +243,7 @@ def run():
 
     epochs = 50
     batch_size = 4
-    num_classes = 2
+    num_classes = 35
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
@@ -254,15 +264,15 @@ def run():
         image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
         # Fully Convolutional Network
         last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
-        correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None, num_classes))
+        correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None))
         learning_rate = tf.placeholder(dtype=tf.float32)
 
         logits, train_op, cross_entropy_loss = optimize(last_layer, correct_label, learning_rate, num_classes)
-        
 
         # Train NN using the train_nn function
         sess.run(tf.global_variables_initializer())
-        train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input, correct_label,
+        train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
+                 correct_label,
                  keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
