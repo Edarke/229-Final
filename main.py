@@ -1,3 +1,4 @@
+import sys
 import os.path
 import tensorflow as tf
 import helper
@@ -5,9 +6,9 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
-
 # Check TensorFlow Version
-assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
+assert LooseVersion(tf.__version__) >= LooseVersion(
+    '1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
 print('TensorFlow Version: {}'.format(tf.__version__))
 
 # Check for a GPU
@@ -24,17 +25,16 @@ def load_vgg(sess, vgg_path):
     :param vgg_path: Path to vgg folder, containing "variables/" and "saved_model.pb"
     :return: Tuple of Tensors from VGG model (image_input, keep_prob, layer3_out, layer4_out, layer7_out)
     """
-    # TODO: Implement function
     #   Use tf.saved_model.loader.load to load the model and weights
-	#return None, None, None, None, None
-	
+    # return None, None, None, None, None
+
     vgg_tag = 'vgg16'
     vgg_input_tensor_name = 'image_input:0'
     vgg_keep_prob_tensor_name = 'keep_prob:0'
     vgg_layer3_out_tensor_name = 'layer3_out:0'
     vgg_layer4_out_tensor_name = 'layer4_out:0'
     vgg_layer7_out_tensor_name = 'layer7_out:0'
-	
+
     tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
     image_input = sess.graph.get_tensor_by_name(vgg_input_tensor_name)
     keep_prob = sess.graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
@@ -43,8 +43,8 @@ def load_vgg(sess, vgg_path):
     layer7_out = sess.graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
 
     return image_input, keep_prob, layer3_out, layer4_out, layer7_out
-    
-	
+
+
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -57,27 +57,30 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # TODO: Implement function
-	#return None
-    	
-	
-    conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1,
+                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     # transposed convolutions - upsample by 2
-    deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4,2, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    #deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4, 2, 'SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    # deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     # skip connection to previous VGG layer
-    skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
-	
+
     # Upsample by 2
-    deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1, kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
-	
+
     # Upsample by 8 (three pooling layers in VGG encoder)
-    deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+    deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     return deconv_3
-    
+
+
 tests.test_layers(layers)
 
 
@@ -90,10 +93,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
-    # TODO: Implement function
-    #return None, None, None
-	
-	# define logits and labels
+    # define logits and labels
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
     labels = tf.reshape(correct_label, (-1, num_classes))
     # loss function
@@ -104,11 +104,12 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     train_op = optimizer.minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
-		
+
+
 tests.test_optimize(optimize)
 
 
-def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
+def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
              correct_label, keep_prob, learning_rate):
     """
     Train neural network and print out the loss during training.
@@ -123,50 +124,115 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    # TODO: Implement function
-    #pass
-    #global g_iou
-    keep_prob_stat = 0.8
+    
+    patience = 1
+    keep_prob_stat = 0.6
     learning_rate_stat = 1e-4
-    #g_iou,_ = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),num_classes)
-    for epoch in range(epochs):
-        avg_loss = 0
-        n = 0
-        for image, label in get_batches_fn(batch_size, get_train=True):
-            _, loss = sess.run([train_op, cross_entropy_loss],
-                               feed_dict={input_image: image,
-                                          correct_label: label,
-                                          keep_prob: keep_prob_stat,
-                                          learning_rate:learning_rate_stat})
-            #iou = sess.run(g_iou)
-            avg_loss = (avg_loss * n + loss) / (n+1)
-            n += 1
-            print("Epoch %d of %d: Batch loss %.4f, Avg Training loss: %.4f" %(epoch+1, epochs, loss, avg_loss))
-        print("Epoch %d of %d: Final Training loss: %.4f" %(epoch+1, epochs, avg_loss))
-        for image, label in get_batches_fn(batch_size, get_train=False):
-            _, loss = sess.run([cross_entropy_loss],
-                               feed_dict={input_image: image,
-                                          correct_label: label,
-                                          keep_prob: keep_prob_stat,
-                                          learning_rate: learning_rate_stat})
-            # iou = sess.run(g_iou)
-            avg_loss = (avg_loss * n + loss) / (n + 1)
-            n += 1
-            print("Epoch %d of %d: Val loss %.4f" % (epoch + 1, epochs, avg_loss))
 
-tests.test_train_nn(train_nn)
+    # Write metrics to data.txt for plotting later.
+    with open("data.txt", "w") as data:
+        print("Epochs\tTrain Loss\tVal Loss\tTrain Accuracy\tVal Accuracy\tTrain iou\tVal iou", file=data)
+        val_loss_history = [float("inf")]
+        for epoch in range(epochs):
+            avg_loss = 0
+            avg_accuracy = 0
+            avg_iou = 0
+            true_pos_cuml = 0
+            true_neg_cuml = 0
+            false_pos_cuml = 0
+            false_neg_cuml = 0
+            n = 0
+            for image, label in get_batches_fn(batch_size, get_train=True):
+                _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
+                                   feed_dict={input_image: image,
+                                              correct_label: label,
+                                              keep_prob: keep_prob_stat,
+                                              learning_rate: learning_rate_stat})
+                
+                l = label.reshape(-1,2)
+                true_pos = 0
+                false_pos = 0
+                false_neg = 0
+                true_neg = 0
+                for i in range(l.shape[0]):
+                    if (l[i,0]==True and ologit[i,0]>ologit[i,1]) or (l[i,1]==True and ologit[i,1]>ologit[i,0]):
+                        true_pos += 1
+                        true_neg += 1
+                        true_pos_cuml += 1
+                        true_neg_cuml += 1
+                    else:
+                        false_pos += 1
+                        false_neg += 1
+                        false_pos_cuml += 1
+                        false_neg_cuml += 1
+						
+                accuracy = (true_pos+true_neg)/(true_pos+false_pos+false_neg+true_neg)
+                iou = true_pos/(true_pos+false_pos+false_neg)
+                
+                avg_loss = (avg_loss * n + loss) / (n + 1)
+                avg_accuracy = (true_pos_cuml+true_neg_cuml)/(true_pos_cuml+false_pos_cuml+false_neg_cuml+true_neg_cuml)
+                avg_iou = true_pos_cuml/(true_pos_cuml+false_pos_cuml+false_neg_cuml)
+                n += 1
+				
+                # Overwrite last line of stdout on linux. Not sure if this works on windows...
+                print("Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
+            print("\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
+
+            val_loss = 0
+            val_accuracy = 0
+            val_iou = 0
+            val_true_pos = 0
+            val_true_neg = 0
+            val_false_pos = 0
+            val_false_neg = 0
+            n = 0
+            for image, label in get_batches_fn(batch_size, get_train=False):
+                loss, ologit = sess.run([cross_entropy_loss, logits],
+                                 feed_dict={input_image: image,
+                                            correct_label: label,
+                                            keep_prob: keep_prob_stat,
+                                            learning_rate: learning_rate_stat})
+			
+                l = label.reshape(-1,2)
+                for i in range(l.shape[0]):
+                    if (l[i,0]==True and ologit[i,0]>ologit[i,1]) or (l[i,1]==True and ologit[i,1]>ologit[i,0]):
+                        val_true_pos += 1
+                        val_true_neg += 1
+                    else:
+                        val_false_pos += 1
+                        val_false_neg += 1
+						
+                val_loss = (val_loss * n + loss) / (n + 1)
+                val_accuracy = (val_true_pos+val_true_neg)/(val_true_pos+val_false_pos+val_false_neg+val_true_neg)
+                val_iou = val_true_pos/(val_true_pos+val_false_pos+val_false_neg)
+                n += 1
+            
+			
+            print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
+            print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (epoch + 1, epochs, val_loss, val_accuracy, val_iou))
+			
+			
+			
+            val_loss_history.append(val_loss)
+            if helper.early_stopping(val_loss_history, patience):
+                print("Early stopping. Min Val Loss:", min(val_loss_history))
+                break
+                # sess.run(g_iou)
+
+
+#tests.test_train_nn(train_nn)
 
 
 def run():
-    #global g_iou
-    #global g_iou_op
+    # global g_iou
+    # global g_iou_op
     image_shape = (160, 576)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
-	
-    epochs = 1
-    batch_size = 2
+
+    epochs = 50
+    batch_size = 4
     num_classes = 2
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
@@ -184,26 +250,20 @@ def run():
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
-        # TODO: Build NN using load_vgg, layers, and optimize function
+        # Build NN using load_vgg, layers, and optimize function
         image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
         # Fully Convolutional Network
         last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
         correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None, num_classes))
         learning_rate = tf.placeholder(dtype=tf.float32)
 
-        # TODO: where does logits get used?`
         logits, train_op, cross_entropy_loss = optimize(last_layer, correct_label, learning_rate, num_classes)
-        g_iou, g_iou_op = tf.metrics.mean_iou(tf.argmax(tf.reshape(correct_label, (-1, 2)), -1), tf.argmax(logits, -1),num_classes)
         
 
-        # TODO: Train NN using the train_nn function
+        # Train NN using the train_nn function
         sess.run(tf.global_variables_initializer())
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, image_input, correct_label, keep_prob, learning_rate)
-		
-        #iou = sess.run(g_iou)
-        #print("IOU: %.4f" %(iou))
-		
-        #print("g_iou",sess.run(g_iou, g_iou_op))
+        train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input, correct_label,
+                 keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)

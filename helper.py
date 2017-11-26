@@ -59,6 +59,19 @@ def maybe_download_pretrained_vgg(data_dir):
         os.remove(os.path.join(vgg_path, vgg_filename))
 
 
+
+def early_stopping(val_loss_history, patience):
+    """
+    Returns true if the validation loss has increased at least `paitence` times in a row.
+    :param val_loss_history:
+    :param patience: Number of times that val_loss is allowed to increase consecutively.
+    :return:
+    """
+    for i in range(patience+1):
+        if val_loss_history[-(i + 2)] > val_loss_history[-1]:
+            return False
+    return True
+
 def gen_batch_function(data_folder, image_shape):
     """
     Generate function to create batches of training data
@@ -80,9 +93,9 @@ def gen_batch_function(data_folder, image_shape):
             for path in glob(os.path.join("data", 'gtFine', subfolder, '*Ids.png'))}
         background_color = np.array([255, 0, 0])
 
-        image_train, image_val = sk.train_test_split(image_paths, test_size=.2, shuffle=True, random_state=42)
+        image_train, image_val = sk.train_test_split(image_paths, test_size=.2, random_state=42)
         image_paths = image_train if get_train else image_val
-        for batch_i in range(0, len(image_paths), batch_size):
+        for batch_i in range(0, int(len(image_paths)), batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i+batch_size]:

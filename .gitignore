@@ -1,6 +1,7 @@
 data/*
 .idea/*
 __py*
+runs/*
 # Compiled source #
 ###################
 *.com
