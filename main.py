@@ -127,7 +127,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    epochs = 1
     patience = 1
     keep_prob_stat = 0.6
     learning_rate_stat = 1e-4
