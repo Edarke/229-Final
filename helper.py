@@ -67,15 +67,17 @@ def gen_batch_function(data_folder, image_shape):
     :return:
     """
     def get_batches_fn(batch_size, get_train=True):
+        subfolder = "train" if get_train else "val"
         """
         Create batches of training data
+        :param get_train:
         :param batch_size: Batch Size
         :return: Batches of training data
         """
-        image_paths = glob(os.path.join(data_folder, 'image_2', '*.png'))
+        image_paths = glob(os.path.join("data", "leftImg8bit", subfolder, '*bit.png'))
         label_paths = {
             re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
-            for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
+            for path in glob(os.path.join("data", 'gtFine', subfolder, '*Ids.png'))}
         background_color = np.array([255, 0, 0])
 
         image_train, image_val = sk.train_test_split(image_paths, test_size=.2, shuffle=True, random_state=42)
@@ -90,7 +92,7 @@ def gen_batch_function(data_folder, image_shape):
                 gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
 
                 gt_bg = np.all(gt_image == background_color, axis=2)
-                gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
+                gt_bg = gt_bg.reshape(gt_bg.shape + 1)
                 gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
 
                 images.append(image)
