@@ -1,3 +1,10 @@
+.Python
+bin/*
+include/*
+lib/*
+man/*
+pip-selfcheck.json
+###################
 data/*
 .idea/*
 __py*
