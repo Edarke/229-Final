@@ -92,7 +92,7 @@ def gen_batch_function(data_folder, image_shape):
             re.sub("gtFine/", "leftImg8bit/", re.sub('_gtFine_labelIds', '_leftImg8bit', path)): path
             for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))}
 
-        for batch_i in range(0, int(len(image_paths)), batch_size):
+        for batch_i in range(0, 6*batch_size, batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i+batch_size]:
@@ -126,16 +126,17 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 
         im_softmax = sess.run(
             [tf.nn.softmax(logits)],
-            {keep_prob: 1.0, image_pl: [image]})
-        out = tf.arg_max(im_softmax, dimension=1)
+            {keep_prob: 1.0, image_pl: [image]})[0]
+        mask = np.argmax(im_softmax, axis=1)
+        mask = mask.reshape([image_shape[0], image_shape[1], 1])
         # im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
         # segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
-        # mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
+        mask = np.dot(mask, np.array([[0, 5, 5, 5]]))
         mask = scipy.misc.toimage(mask, mode="RGBA")
         street_im = scipy.misc.toimage(image)
         street_im.paste(mask, box=None, mask=mask)
 
-        yield os.path.basename(image_file), np.array(out)
+        yield os.path.basename(image_file), np.array(mask)
 
 
 def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image):
