@@ -1,10 +1,14 @@
 import sys
+import argparse
 import os.path
 import tensorflow as tf
 import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
+
+NUM_CLASSES_KITTI = 2
+NUM_CLASSES_CITYSCAPES = 35
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -233,6 +237,23 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
 
 
 def run():
+    parser = argparse.ArgumentParser(description="Train and Infer FCN")
+    parser.add_argument('--epochs', default=1, type=int,
+                        help='number of epochs')
+    parser.add_argument('--batch_size', default=4, type=int,
+                        help='batch size')
+    parser.add_argument('--num_batches', default=4, type=int,
+                        help='number of batches, only adjusted for testing')
+    parser.add_argument('--fast', action='store_true',
+                        help='runs for 1 batch with 1 epoch')
+    parser.add_argument('--data-source', default='cityscapes',
+                        help='kitti or cityscapes')
+    
+    args = parser.parse_args ()
+
+    print ("Running with arguments:")
+    print (args)
+    
     # global g_iou
     # global g_iou_op
     image_shape = (160, 576)
@@ -240,9 +261,17 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
-    epochs = 1
-    batch_size = 4
-    num_classes = 35
+    epochs = args.epochs
+    batch_size = args.batch_size
+    fast_run = args.fast
+    data_set = args.data_source
+    num_classes = 0
+
+    if data_set == "cityscapes":
+        num_classes = NUM_CLASSES_CITYSCAPES
+    elif data_set == "kitti":
+        num_classes = NUM_CLASSES_KITTI
+        
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
