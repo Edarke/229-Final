@@ -257,7 +257,7 @@ def run():
     
     # global g_iou
     # global g_iou_op
-    image_shape = (160, 576)
+    image_shape = (1024//4, 2048//4)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)

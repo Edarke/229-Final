@@ -11,7 +11,7 @@ from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
 import sklearn.model_selection as sk
-
+import labels
 
 class DLProgress(tqdm):
     last_block = 0
@@ -93,13 +93,13 @@ def gen_batch_function(data_folder, image_shape):
             re.sub("gtFine/", "leftImg8bit/", re.sub('_gtFine_labelIds', '_leftImg8bit', path)): path
             for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))}
 
-        for batch_i in range(0, int(batch_size * 100), batch_size):
+        for batch_i in range(0, int(len(image_paths)), batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i + batch_size]:
                 gt_image_file = label_paths[image_file]
 
-                image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+                image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape, interp="nearest")
                 gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
                 # gt_bg = np.all(gt_image == background_color, axis=2)
                 # gt_bg = gt_bg.reshape(gt_bg.shape + 1)
@@ -135,9 +135,9 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
         # segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
 
         mask2 = np.zeros((image_shape[0], image_shape[1], 4))
-        mask2[:, :, 0] = (mask * 7) % 255
+        mask2[:, :, 0] = (mask * 11) % 255
         mask2[:, :, 1] = (mask ** 2) % 255
-        mask2[:, :, 2] = (mask * 10) % 255
+        mask2[:, :, 2] = (mask ** 3) % 255
         mask2[:, :, 3] = 150  # set alpha channel
         mask = scipy.misc.toimage(mask2, mode="RGBA")
         street_im = scipy.misc.toimage(image)
