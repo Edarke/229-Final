@@ -92,7 +92,7 @@ def gen_batch_function(data_folder, image_shape):
             re.sub("gtFine/", "leftImg8bit/", re.sub('_gtFine_labelIds', '_leftImg8bit', path)): path
             for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))}
 
-        for batch_i in range(0, 6*batch_si, batch_size):
+        for batch_i in range(0, int(len(image_paths)), batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i+batch_size]:
