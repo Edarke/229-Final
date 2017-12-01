@@ -8,9 +8,10 @@ import numpy as np
 from distutils.version import LooseVersion
 import project_tests as tests
 import itertools
+import labels as label_util
 
 NUM_CLASSES_KITTI = 2
-NUM_CLASSES_CITYSCAPES = 35
+NUM_CLASSES_CITYSCAPES = 20
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -120,7 +121,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, num_classes):
+             correct_label, keep_prob, learning_rate, num_classes, num_batches, verbose):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -134,121 +135,80 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    patience = 1
+    patience = 1  # number of times val_loss can increase before stopping
     keep_prob_stat = 0.5
     learning_rate_stat = 1e-4
 
-
-    # Placeholders to take in batches onf data
+    # Initialize metrics for accuracy and mean iou
     tf_label = tf.placeholder(dtype=tf.int32, shape=[None, None])
     tf_prediction = tf.placeholder(dtype=tf.int32, shape=[None, None])
-
-    # Define the metric and update operations
     tf_metric, tf_metric_update = tf.metrics.mean_iou(tf_label,
                                                       tf_prediction,
                                                       num_classes,
-                                                      name="mean_iou")
-
-    # Isolate the variables stored behind the scenes by the metric operation
-    running_vars = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="mean_iou")
-
-    # Define initializer to initialize/reset running variables
+                                                      weights=tf.convert_to_tensor(label_util.label_weights),
+                                                      name="metric_mean_iou")
+    acc_metric, acc_update = tf.metrics.accuracy(tf_label,
+                                                 tf_prediction,
+                                                 name="metric_acc")
+    running_vars = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="metric_.*")
     running_vars_initializer = tf.variables_initializer(var_list=running_vars)
+
+    def update_metrics(labels, ologit):
+        """
+        After a prediction, update the mean iou and accuracy scores.
+
+        :param labels: Ground truth. shape = (batch_size, width, height)
+        :param ologit: Predicted softmax values. shape = (batch_size, width * height)
+        :return batch_accuracy, average_epoch_accuracy, avg_iou:
+        """
+        flattened_labels = labels.astype(int).reshape([num_images, -1])
+        predicted_classes = np.argmax(ologit, axis=1).reshape([num_images, -1])
+        feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes}
+        batch_accuracy, _ = sess.run([acc_update, tf_metric_update], feed_dict=feed_dict)
+        avg_accuracy, avg_iou = sess.run([acc_metric, tf_metric])
+        return batch_accuracy, avg_accuracy, avg_iou
 
     # Write metrics to data.txt for plotting later.
     with open("data.txt", "w") as data:
         print("Epochs\tTrain Loss\tVal Loss\tTrain Accuracy\tVal Accuracy\tTrain iou\tVal iou", file=data)
         val_loss_history = [float("inf")]
         for epoch in range(epochs):
-            avg_loss = 0
-            avg_accuracy = 0
-            avg_iou = 0
-            true_pos_cuml = 0
-            true_neg_cuml = 0
-            false_pos_cuml = 0
-            false_neg_cuml = 0
             n = 0
-            for image, label in get_batches_fn(batch_size, get_train=True):
+            avg_loss = 0
+
+            sess.run(running_vars_initializer)
+            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True), num_batches):
+                num_images = images.shape[0]
                 _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
-                                           feed_dict={input_image: image,
-                                                      correct_label: label,
+                                           feed_dict={input_image: images,
+                                                      correct_label: labels,
                                                       keep_prob: keep_prob_stat,
                                                       learning_rate: learning_rate_stat})
-            
-                
-                p = label.flatten()
-                true_pos = 0
-                false_pos = 0
-                false_neg = 0
-                true_neg = 0
-                for i in range(p.shape[0]):
-                    if (p[i] == np.argmax(ologit[i,:])):
-                        true_pos += 1
-                        true_neg += 1
-                        true_pos_cuml += 1
-                        true_neg_cuml += 1
-                    else:
-                        false_pos += 1
-                        false_neg += 1
-                        false_pos_cuml += 1
-                        false_neg_cuml += 1
-
-                accuracy = (true_pos + true_neg) / (true_pos + false_pos + false_neg + true_neg)
-                iou = true_pos / (true_pos + false_pos + false_neg)
-
+                batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, ologit)
                 avg_loss = (avg_loss * n + loss) / (n + 1)
-                avg_accuracy = (true_pos_cuml + true_neg_cuml) / (
-                true_pos_cuml + false_pos_cuml + false_neg_cuml + true_neg_cuml)
-                avg_iou = true_pos_cuml / (true_pos_cuml + false_pos_cuml + false_neg_cuml)
                 n += 1
 
-                # Overwrite last line of stdout on linux. Not sure if this works on windows...
-                print(
-                    "Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
-                     epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
+                if verbose:
+                    # Overwrite last line of stdout on linux. Not sure if this works on windows...
+                    print(
+                        "Epoch %d of %d, Batch %d: Batch loss %.4f, Batch accuracy %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
+                            epoch + 1, epochs, n, loss, batch_accuracy, avg_loss, avg_accuracy, avg_iou), end="")
             print(
                 "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
-                epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
+                    epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
 
-            val_loss = 0
-            val_accuracy = 0
-            val_iou = 0
-            val_true_pos = 0
-            val_true_neg = 0
-            val_false_pos = 0
-            val_false_neg = 0
             n = 0
+            val_loss = 0
             sess.run(running_vars_initializer)
-            for image, label in get_batches_fn(batch_size, get_train=False):
+            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches):
+                num_images = images.shape[0]
                 loss, ologit = sess.run([cross_entropy_loss, logits],
-                                        feed_dict={input_image: image,
-                                                   correct_label: label,
+                                        feed_dict={input_image: images,
+                                                   correct_label: labels,
                                                    keep_prob: keep_prob_stat,
                                                    learning_rate: learning_rate_stat})
-
-                l_cast_argmax = label.astype(int).reshape([4, 256 * 512])
-                ologit_argmax = np.argmax(ologit, axis=1).reshape([4, 256*512])
-
-                feed_dict = {tf_label: l_cast_argmax, tf_prediction: ologit_argmax}
-                sess.run(tf_metric_update, feed_dict=feed_dict)
-
-                score = sess.run(tf_metric)
-                print("TF Mean IOU %d", score)
-
-
-                p = label.flatten()
-                for i in range(p.shape[0]):
-                    if (p[i] == np.argmax(ologit[i,:])):
-                        val_true_pos += 1
-                        val_true_neg += 1
-                    else:
-                        val_false_pos += 1
-                        val_false_neg += 1
-
-                val_loss = (val_loss * n + loss) / (n + 1)
-                val_accuracy = (val_true_pos + val_true_neg) / (
-                val_true_pos + val_false_pos + val_false_neg + val_true_neg)
-                val_iou = val_true_pos / (val_true_pos + val_false_pos + val_false_neg)
+                _, val_accuracy, val_iou = update_metrics(labels, ologit)
+                val_loss = (n * val_loss + loss) / (n + 1)
                 n += 1
 
             print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (
@@ -260,7 +220,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             if helper.early_stopping(val_loss_history, patience):
                 print("Early stopping. Min Val Loss:", min(val_loss_history))
                 break
-                # sess.run(g_iou)
 
 
 # tests.test_train_nn(train_nn)
@@ -272,21 +231,22 @@ def run():
                         help='number of epochs')
     parser.add_argument('--batch_size', default=4, type=int,
                         help='batch size')
-    parser.add_argument('--num_batches', default=4, type=int,
+    parser.add_argument('--num_batches', default=None, type=int,
                         help='number of batches, only adjusted for testing')
     parser.add_argument('--fast', action='store_true',
                         help='runs for 1 batch with 1 epoch')
     parser.add_argument('--data-source', default='cityscapes',
                         help='kitti or cityscapes')
-    
-    args = parser.parse_args ()
+    parser.add_argument('--quiet', '-q', default=False, type=bool,
+                        help='If true, does not print batch updates')
+    args = parser.parse_args()
 
-    print ("Running with arguments:")
-    print (args)
-    
+    print("Running with arguments:")
+    print(args)
+
     # global g_iou
     # global g_iou_op
-    image_shape = (1024//4, 2048//4)
+    image_shape = (1024 // 4, 2048 // 4)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -294,14 +254,16 @@ def run():
     epochs = args.epochs
     batch_size = args.batch_size
     fast_run = args.fast
+    verbose = not args.quiet
     data_set = args.data_source
+    num_batches = args.num_batches
     num_classes = 0
 
     if data_set == "cityscapes":
         num_classes = NUM_CLASSES_CITYSCAPES
     elif data_set == "kitti":
         num_classes = NUM_CLASSES_KITTI
-        
+
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
@@ -331,7 +293,7 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate, num_classes)
+                 keep_prob, learning_rate, num_classes, num_batches, verbose)
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
