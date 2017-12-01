@@ -12,6 +12,7 @@ import labels as label_util
 
 NUM_CLASSES_KITTI = 2
 NUM_CLASSES_CITYSCAPES = 20
+NUM_CATEGORIES_CITYSCAPES = 8
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(

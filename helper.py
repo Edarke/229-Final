@@ -13,6 +13,7 @@ from tqdm import tqdm
 import sklearn.model_selection as sk
 import labels
 
+
 class DLProgress(tqdm):
     last_block = 0
 
@@ -100,7 +101,8 @@ def gen_batch_function(data_folder, image_shape):
                 gt_image_file = label_paths[image_file]
 
                 image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape, interp="nearest")
-                gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
+                gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape, interp="nearest")
+
                 gt_image = labels.id_to_trainId_map_func(gt_image)
                 images.append(image)
                 gt_images.append(gt_image)
@@ -129,11 +131,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
         mask = np.argmax(im_softmax, axis=1)
         mask = mask.reshape([image_shape[0], image_shape[1]])
 
-        mask2 = np.zeros((image_shape[0], image_shape[1], 4))
-        mask2[:, :, 0] = (mask * 19) % 255
-        mask2[:, :, 1] = (mask ** 2) % 255
-        mask2[:, :, 2] = (mask ** 3) % 255
-        mask2[:, :, 3] = 150  # set alpha channel
+        mask2 = labels.get_color_matrix(mask)
         mask = scipy.misc.toimage(mask2, mode="RGBA")
         street_im = scipy.misc.toimage(image)
         street_im.paste(mask, box=None, mask=mask)
