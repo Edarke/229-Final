@@ -1,0 +1,1 @@
+Epochs	Train Loss	Val Loss	Train Accuracy	Val Accuracy	Train iou	Val iou
