@@ -98,10 +98,11 @@ labels = [
 ]
 
 import numpy as np
+import tensorflow as tf
 id_to_trainId = {label.id: label.trainId for label in labels}
 id_to_trainId_map_func = np.vectorize(id_to_trainId.get)
 # weight to give each class in evaluation. id 19 is ignored.
-label_weights = np.array([1] * 19 + [0])
+label_weights = tf.constant([1.0] * 19 + [0.0])
 
 
 #--------------------------------------------------------------------------------

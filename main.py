@@ -145,7 +145,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     tf_metric, tf_metric_update = tf.metrics.mean_iou(tf_label,
                                                       tf_prediction,
                                                       num_classes,
-                                                      weights=tf.convert_to_tensor(label_util.label_weights),
+                                                      #weights=label_util.label_weights,
                                                       name="metric_mean_iou")
     acc_metric, acc_update = tf.metrics.accuracy(tf_label,
                                                  tf_prediction,
