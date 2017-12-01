@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 from distutils.version import LooseVersion
 import project_tests as tests
+import itertools
 
 NUM_CLASSES_KITTI = 2
 NUM_CLASSES_CITYSCAPES = 35
@@ -137,6 +138,23 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     keep_prob_stat = 0.5
     learning_rate_stat = 1e-4
 
+
+    # Placeholders to take in batches onf data
+    tf_label = tf.placeholder(dtype=tf.int32, shape=[None, None])
+    tf_prediction = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+    # Define the metric and update operations
+    tf_metric, tf_metric_update = tf.metrics.mean_iou(tf_label,
+                                                      tf_prediction,
+                                                      num_classes,
+                                                      name="mean_iou")
+
+    # Isolate the variables stored behind the scenes by the metric operation
+    running_vars = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="mean_iou")
+
+    # Define initializer to initialize/reset running variables
+    running_vars_initializer = tf.variables_initializer(var_list=running_vars)
+
     # Write metrics to data.txt for plotting later.
     with open("data.txt", "w") as data:
         print("Epochs\tTrain Loss\tVal Loss\tTrain Accuracy\tVal Accuracy\tTrain iou\tVal iou", file=data)
@@ -200,12 +218,23 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             val_false_pos = 0
             val_false_neg = 0
             n = 0
+            sess.run(running_vars_initializer)
             for image, label in get_batches_fn(batch_size, get_train=False):
                 loss, ologit = sess.run([cross_entropy_loss, logits],
                                         feed_dict={input_image: image,
                                                    correct_label: label,
                                                    keep_prob: keep_prob_stat,
                                                    learning_rate: learning_rate_stat})
+
+                l_cast_argmax = label.astype(int).reshape([4, 256 * 512])
+                ologit_argmax = np.argmax(ologit, axis=1).reshape([4, 256*512])
+
+                feed_dict = {tf_label: l_cast_argmax, tf_prediction: ologit_argmax}
+                sess.run(tf_metric_update, feed_dict=feed_dict)
+
+                score = sess.run(tf_metric)
+                print("TF Mean IOU %d", score)
+
 
                 p = label.flatten()
                 for i in range(p.shape[0]):
