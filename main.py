@@ -185,9 +185,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 n += 1
 
                 # Overwrite last line of stdout on linux. Not sure if this works on windows...
-                #print(
-                #    "Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
-                #     epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
+                print(
+                    "Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
+                     epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
             print(
                 "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
                 epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
