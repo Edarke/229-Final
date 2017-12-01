@@ -4,6 +4,7 @@ import os.path
 import tensorflow as tf
 import helper
 import warnings
+import numpy as np
 from distutils.version import LooseVersion
 import project_tests as tests
 
@@ -39,6 +40,7 @@ def load_vgg(sess, vgg_path):
     vgg_layer4_out_tensor_name = 'layer4_out:0'
     vgg_layer7_out_tensor_name = 'layer7_out:0'
 
+    print(vgg_tag, vgg_path)
     tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
     image_input = sess.graph.get_tensor_by_name(vgg_input_tensor_name)
     keep_prob = sess.graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
@@ -117,7 +119,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate):
+             correct_label, keep_prob, learning_rate, num_classes):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -132,7 +134,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     :param learning_rate: TF Placeholder for learning rate
     """
     patience = 1
-    keep_prob_stat = 0.6
+    keep_prob_stat = 0.5
     learning_rate_stat = 1e-4
 
     # Write metrics to data.txt for plotting later.
@@ -154,15 +156,15 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                                                       correct_label: label,
                                                       keep_prob: keep_prob_stat,
                                                       learning_rate: learning_rate_stat})
-
-                l = label.reshape(-1, 2)
+            
+                
+                p = label.flatten()
                 true_pos = 0
                 false_pos = 0
                 false_neg = 0
                 true_neg = 0
-                for i in range(l.shape[0]):
-                    if (l[i, 0] == True and ologit[i, 0] > ologit[i, 1]) or (
-                            l[i, 1] == True and ologit[i, 1] > ologit[i, 0]):
+                for i in range(p.shape[0]):
+                    if (p[i] == np.argmax(ologit[i,:])):
                         true_pos += 1
                         true_neg += 1
                         true_pos_cuml += 1
@@ -183,9 +185,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 n += 1
 
                 # Overwrite last line of stdout on linux. Not sure if this works on windows...
-                print(
-                    "Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
-                    epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
+                #print(
+                #    "Epoch %d of %d: Batch loss %.4f, Batch accuracy %.4f, Batch iou %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
+                #     epoch + 1, epochs, loss, accuracy, iou, avg_loss, avg_accuracy, avg_iou), end="")
             print(
                 "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
                 epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
@@ -205,10 +207,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                                                    keep_prob: keep_prob_stat,
                                                    learning_rate: learning_rate_stat})
 
-                l = label.reshape(-1, 2)
-                for i in range(l.shape[0]):
-                    if (l[i, 0] == True and ologit[i, 0] > ologit[i, 1]) or (
-                            l[i, 1] == True and ologit[i, 1] > ologit[i, 0]):
+                p = label.flatten()
+                for i in range(p.shape[0]):
+                    if (p[i] == np.argmax(ologit[i,:])):
                         val_true_pos += 1
                         val_true_neg += 1
                     else:
@@ -256,7 +257,7 @@ def run():
     
     # global g_iou
     # global g_iou_op
-    image_shape = (160, 576)
+    image_shape = (1024//4, 2048//4)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -301,7 +302,7 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate)
+                 keep_prob, learning_rate, num_classes)
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
