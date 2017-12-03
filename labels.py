@@ -100,18 +100,10 @@ labels = [
 ]
 
 
-id_to_trainId = {label.id: label.trainId for label in labels}
+id_to_trainId = {label.id: label.categoryId for label in labels}
 id_to_trainId_map_func = np.vectorize(id_to_trainId.get)
-
 trainId_to_id = {v: k for k, v in id_to_trainId.items()}
 
-id_to_category = {label.id: label.categoryId for label in labels}
-id_to_category_map_func = np.vectorize(id_to_category.get)
-
-catId_to_id = {v: k for k, v in id_to_category.items()}
-
-# weight to give each class in evaluation. id 19 is ignored.
-label_weights = tf.constant([1.0] * 19 + [0.0])
 
 def get_color(id):
     return np.array(labels[trainId_to_id[id]].color)

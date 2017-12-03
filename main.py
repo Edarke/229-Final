@@ -57,7 +57,7 @@ def load_vgg(sess, vgg_path):
 tests.test_load_vgg(load_vgg, tf)
 
 
-def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
+def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
     :param vgg_layer7_out: TF Tensor for VGG Layer 3 output
@@ -76,6 +76,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
+    skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
 
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
@@ -83,6 +84,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
+    skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
 
     # Upsample by 8 (three pooling layers in VGG encoder)
     deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
@@ -122,7 +124,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, num_classes, num_batches, verbose):
+             correct_label, keep_prob, learning_rate, num_classes, num_batches, class_to_ignore, verbose):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -136,7 +138,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    patience = 1  # number of times val_loss can increase before stopping
+    patience = 3  # number of times val_loss can increase before stopping
     keep_prob_stat = 0.5
     learning_rate_stat = 1e-4
 
@@ -146,7 +148,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     tf_metric, tf_metric_update = tf.metrics.mean_iou(tf_label,
                                                       tf_prediction,
                                                       num_classes,
-                                                      #weights=label_util.label_weights,
                                                       name="metric_mean_iou")
     acc_metric, acc_update = tf.metrics.accuracy(tf_label,
                                                  tf_prediction,
@@ -238,6 +239,8 @@ def run():
                         help='runs for 1 batch with 1 epoch')
     parser.add_argument('--data-source', default='cityscapes',
                         help='kitti or cityscapes')
+    parser.add_argument('--use-classes', default=False,
+                        help='If true, predict cityscape classes instead of categories')
     parser.add_argument('--quiet', '-q', default=False, type=bool,
                         help='If true, does not print batch updates')
     args = parser.parse_args()
@@ -258,10 +261,16 @@ def run():
     verbose = not args.quiet
     data_set = args.data_source
     num_batches = args.num_batches
+    use_classes = args.use_classes
     num_classes = 0
+    class_to_ignore = 0
 
     if data_set == "cityscapes":
-        num_classes = NUM_CLASSES_CITYSCAPES
+        if use_classes:
+            num_classes = NUM_CLASSES_CITYSCAPES
+            class_to_ignore = 19
+        else:
+            num_classes = NUM_CATEGORIES_CITYSCAPES
     elif data_set == "kitti":
         num_classes = NUM_CLASSES_KITTI
 
@@ -284,7 +293,7 @@ def run():
         # Build NN using load_vgg, layers, and optimize function
         image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
         # Fully Convolutional Network
-        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
+        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob)
         correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None))
         learning_rate = tf.placeholder(dtype=tf.float32)
 
@@ -294,7 +303,7 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate, num_classes, num_batches, verbose)
+                 keep_prob, learning_rate, num_classes, num_batches, class_to_ignore, verbose)
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
