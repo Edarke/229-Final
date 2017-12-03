@@ -1,5 +1,6 @@
 import sys
 import argparse
+import os
 import os.path
 import tensorflow as tf
 import helper
@@ -244,6 +245,8 @@ def run():
                         help='runs for 1 batch with 1 epoch')
     parser.add_argument('--data-source', default='cityscapes',
                         help='kitti or cityscapes')
+    parser.add_argument('--scale-factor', default = 2, type=int,
+                        help="Scales image down on each dimension")
     parser.add_argument('--quiet', '-q', default=False, type=bool,
                         help='If true, does not print batch updates')
     args = parser.parse_args()
@@ -253,7 +256,7 @@ def run():
 
     # global g_iou
     # global g_iou_op
-    image_shape = (1024 // 4, 2048 // 4)
+    image_shape = (1024 // args.scale_factor, 2048 // args.scale_factor)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
