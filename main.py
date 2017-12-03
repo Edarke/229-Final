@@ -1,5 +1,6 @@
 import sys
 import argparse
+import os
 import os.path
 import tensorflow as tf
 import helper
@@ -143,10 +144,12 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     # Initialize metrics for accuracy and mean iou
     tf_label = tf.placeholder(dtype=tf.int32, shape=[None, None])
     tf_prediction = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+    tf_iou_mask = tf.placeholder (dtype=tf.int32, shape = [None, None])
     tf_metric, tf_metric_update = tf.metrics.mean_iou(tf_label,
                                                       tf_prediction,
                                                       num_classes,
-                                                      #weights=label_util.label_weights,
+                                                      weights = tf_iou_mask,
                                                       name="metric_mean_iou")
     acc_metric, acc_update = tf.metrics.accuracy(tf_label,
                                                  tf_prediction,
@@ -163,8 +166,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
         :return batch_accuracy, average_epoch_accuracy, avg_iou:
         """
         flattened_labels = labels.astype(int).reshape([num_images, -1])
+        IOU_MAX_CLASS_DEFAULT = 18
+        flattened_mask = (labels <= IOU_MAX_CLASS_DEFAULT).astype(int).reshape([num_images, -1])        
+
         predicted_classes = np.argmax(ologit, axis=1).reshape([num_images, -1])
-        feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes}
+        feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes, tf_iou_mask: flattened_mask}
         batch_accuracy, _ = sess.run([acc_update, tf_metric_update], feed_dict=feed_dict)
         avg_accuracy, avg_iou = sess.run([acc_metric, tf_metric])
         return batch_accuracy, avg_accuracy, avg_iou
@@ -180,6 +186,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             sess.run(running_vars_initializer)
             for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True), num_batches):
                 num_images = images.shape[0]
+                
                 _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
                                            feed_dict={input_image: images,
                                                       correct_label: labels,
@@ -238,6 +245,8 @@ def run():
                         help='runs for 1 batch with 1 epoch')
     parser.add_argument('--data-source', default='cityscapes',
                         help='kitti or cityscapes')
+    parser.add_argument('--scale-factor', default = 2, type=int,
+                        help="Scales image down on each dimension")
     parser.add_argument('--quiet', '-q', default=False, type=bool,
                         help='If true, does not print batch updates')
     args = parser.parse_args()
@@ -247,7 +256,7 @@ def run():
 
     # global g_iou
     # global g_iou_op
-    image_shape = (1024 // 4, 2048 // 4)
+    image_shape = (1024 // args.scale_factor, 2048 // args.scale_factor)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
