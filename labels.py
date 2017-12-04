@@ -99,10 +99,24 @@ labels = [
     Label(  'license plate'        , -1 ,       -1 , 'vehicle'         , 7       , False        , True         , (  0,  0,142, alpha) ),
 ]
 
+id_to_trainId = None
+id_to_trainId_map_func = None
+trainId_to_id = None
 
-id_to_trainId = {label.id: label.categoryId for label in labels}
-id_to_trainId_map_func = np.vectorize(id_to_trainId.get)
-trainId_to_id = {v: k for k, v in id_to_trainId.items()}
+
+def init(use_classes):
+    global id_to_trainId
+    global id_to_trainId_map_func
+    global trainId_to_id
+
+    if use_classes:
+        id_to_trainId = {label.id: label.trainId for label in labels}
+        id_to_trainId_map_func = np.vectorize(id_to_trainId.get)
+        trainId_to_id = {v: k for k, v in id_to_trainId.items()}
+    else:
+        id_to_trainId = {label.id: label.categoryId for label in labels}
+        id_to_trainId_map_func = np.vectorize(id_to_trainId.get)
+        trainId_to_id = {v: k for k, v in id_to_trainId.items()}
 
 
 def get_color(id):

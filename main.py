@@ -1,5 +1,6 @@
 import sys
 import argparse
+import os
 import os.path
 import tensorflow as tf
 import helper
@@ -76,7 +77,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
-    skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
+   # skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
 
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
@@ -84,7 +85,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
-    skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
+    #skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
 
     # Upsample by 8 (three pooling layers in VGG encoder)
     deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
@@ -145,9 +146,12 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     # Initialize metrics for accuracy and mean iou
     tf_label = tf.placeholder(dtype=tf.int32, shape=[None, None])
     tf_prediction = tf.placeholder(dtype=tf.int32, shape=[None, None])
+
+    tf_iou_mask = tf.placeholder(dtype=tf.int32, shape=[None, None])
     tf_metric, tf_metric_update = tf.metrics.mean_iou(tf_label,
                                                       tf_prediction,
                                                       num_classes,
+                                                      weights=tf_iou_mask,
                                                       name="metric_mean_iou")
     acc_metric, acc_update = tf.metrics.accuracy(tf_label,
                                                  tf_prediction,
@@ -155,7 +159,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     running_vars = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="metric_.*")
     running_vars_initializer = tf.variables_initializer(var_list=running_vars)
 
-    def update_metrics(labels, ologit):
+    def update_metrics(labels, ologit, class_to_ignore):
         """
         After a prediction, update the mean iou and accuracy scores.
 
@@ -164,8 +168,10 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
         :return batch_accuracy, average_epoch_accuracy, avg_iou:
         """
         flattened_labels = labels.astype(int).reshape([num_images, -1])
+        flattened_mask = (flattened_labels != class_to_ignore).astype(int)
+
         predicted_classes = np.argmax(ologit, axis=1).reshape([num_images, -1])
-        feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes}
+        feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes, tf_iou_mask: flattened_mask}
         batch_accuracy, _ = sess.run([acc_update, tf_metric_update], feed_dict=feed_dict)
         avg_accuracy, avg_iou = sess.run([acc_metric, tf_metric])
         return batch_accuracy, avg_accuracy, avg_iou
@@ -181,12 +187,13 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             sess.run(running_vars_initializer)
             for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True), num_batches):
                 num_images = images.shape[0]
+
                 _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
                                            feed_dict={input_image: images,
                                                       correct_label: labels,
                                                       keep_prob: keep_prob_stat,
                                                       learning_rate: learning_rate_stat})
-                batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, ologit)
+                batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, ologit, class_to_ignore)
                 avg_loss = (avg_loss * n + loss) / (n + 1)
                 n += 1
 
@@ -209,7 +216,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                                                    correct_label: labels,
                                                    keep_prob: keep_prob_stat,
                                                    learning_rate: learning_rate_stat})
-                _, val_accuracy, val_iou = update_metrics(labels, ologit)
+                _, val_accuracy, val_iou = update_metrics(labels, ologit, class_to_ignore)
                 val_loss = (n * val_loss + loss) / (n + 1)
                 n += 1
 
@@ -241,6 +248,8 @@ def run():
                         help='kitti or cityscapes')
     parser.add_argument('--use-classes', default=False,
                         help='If true, predict cityscape classes instead of categories')
+    parser.add_argument('--scale-factor', default=4, type=int,
+                        help="Scales image down on each dimension")
     parser.add_argument('--quiet', '-q', default=False, type=bool,
                         help='If true, does not print batch updates')
     args = parser.parse_args()
@@ -248,9 +257,7 @@ def run():
     print("Running with arguments:")
     print(args)
 
-    # global g_iou
-    # global g_iou_op
-    image_shape = (1024 // 4, 2048 // 4)
+    image_shape = (1024 // args.scale_factor, 2048 // args.scale_factor)
     data_dir = './data'
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
@@ -276,10 +283,8 @@ def run():
 
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
+    label_util.init(use_classes)
 
-    # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
-    # You'll need a GPU with at least 10 teraFLOPS to train on.
-    #  https://www.cityscapes-dataset.com/
 
     with tf.Session() as sess:
         # Path to vgg model

@@ -1,4 +1,5 @@
 .Python
+data.txt
 bin/*
 include/*
 lib/*
