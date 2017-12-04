@@ -9,6 +9,8 @@ import time
 import tensorflow as tf
 from glob import glob
 from urllib.request import urlretrieve
+import scipy.stats as stats
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 import sklearn.model_selection as sk
 import labels
