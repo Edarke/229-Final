@@ -219,7 +219,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 _, val_accuracy, val_iou = update_metrics(labels, ologit, class_to_ignore)
                 val_loss = (n * val_loss + loss) / (n + 1)
                 n += 1
-
+                
             print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (
                 epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
             print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (
@@ -231,6 +231,48 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 break
 
 
+        for s in ["train", "val"]:
+            compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
+                                      learning_rate, learning_rate_stat,
+                                      correct_label, get_batches_fn,
+                                      cross_entropy_loss, batch_size,
+                                      num_batches, "train")
+
+def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
+                              learning_rate, learning_rate_stat, correct_label,
+                              get_batches_fn, cross_entropy_loss,
+                              batch_size, num_batches, data_set):
+    get_train = True if data_set == "train" else False
+
+    confusion_matrix_sum = None
+
+    for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=get_train), num_batches):
+        num_images = images.shape[0]
+        loss, ologit = sess.run([cross_entropy_loss, logits],
+                                feed_dict={input_image: images,
+                                           correct_label: labels,
+                                           keep_prob: keep_prob_stat,
+                                           learning_rate: learning_rate_stat})
+                                           
+        predicted_flattened = np.argmax(ologit, axis=1).reshape(-1)
+        labels_flattened = labels.reshape(-1)
+
+        m = tf.contrib.metrics.confusion_matrix (labels_flattened, predicted_flattened).eval()
+        if confusion_matrix_sum == None:
+            confusion_matrix_sum = m
+        else:
+            confusion_matrix_sum += m                
+
+        confusion_matrix_sum += tf.contrib.metrics.confusion_matrix (labels_flattened, predicted_flattened).eval()
+        
+    row_sum = np.sum (confusion_matrix_sum, axis = 1, keepdims = True)
+
+    confusion_matrix_prob = confusion_matrix_sum / row_sum
+
+    print ("For dataset " + data_set)
+    print (confusion_matrix_prob)              
+
+
 # tests.test_train_nn(train_nn)
 
 
@@ -240,7 +282,7 @@ def run():
                         help='number of epochs')
     parser.add_argument('--batch_size', default=4, type=int,
                         help='batch size')
-    parser.add_argument('--num_batches', default=None, type=int,
+    parser.add_argument('--num-batches', default=None, type=int,
                         help='number of batches, only adjusted for testing')
     parser.add_argument('--fast', action='store_true',
                         help='runs for 1 batch with 1 epoch')
@@ -250,8 +292,13 @@ def run():
                         help='If true, predict cityscape classes instead of categories')
     parser.add_argument('--scale-factor', default=4, type=int,
                         help="Scales image down on each dimension")
+    parser.add_argument('--save-train', default=False,
+                        help="If true, saves output train images with labels")
+    parser.add_argument('--save-test', default=False,
+                        help="If true, saves output test images with labels")
     parser.add_argument('--quiet', '-q', default=False, type=bool,
                         help='If true, does not print batch updates')
+
     args = parser.parse_args()
 
     print("Running with arguments:")
@@ -310,8 +357,10 @@ def run():
                  correct_label,
                  keep_prob, learning_rate, num_classes, num_batches, class_to_ignore, verbose)
 
-        # TODO: Save inference data using helper.save_inference_samples
-        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
+        if (args.save_test):
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
+        if (args.save_train):
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "train")
 
         # OPTIONAL: Apply the trained model to a video
 
