@@ -308,6 +308,10 @@ def run():
                         help="If ON, saves output train images with labels")
     parser.add_argument('--save-test', action='store_true',
                         help="If ON, saves output test images with labels")
+    parser.add_argument('--save-val', action='store_true',
+                        help="If ON, saves output val images with labels")
+    parser.add_argument('--save-all-images', action='store_true',
+                        help="If ON, saves all train test val images with labels")
     parser.add_argument('--quiet', '-q', action='store_true',
                         help='If ON, does not print batch updates')
     parser.add_argument('--no-early-stop', action='store_true',
@@ -378,10 +382,13 @@ def run():
                  correct_label,
                  keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore, verbose)
 
-        if (args.save_test):
+        if (args.save_test or args.save_all_images):
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
-        if (args.save_train):
+        if (args.save_train or args.save_all_images):
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "train")
+        if (args.save_val or args.save_all_images):
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "val")
+
 
         # OPTIONAL: Apply the trained model to a video
 
