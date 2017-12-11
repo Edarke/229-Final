@@ -77,15 +77,15 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
-   # skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
+    #skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
 
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
-                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                    kernel_initializer=tf.keras.initializers.he_uniform())
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
-    #skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
+    # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
 
     # Upsample by 8 (three pooling layers in VGG encoder)
     deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
@@ -140,7 +140,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
     :param learning_rate: TF Placeholder for learning rate
     """
     patience = 3  # number of times val_loss can increase before stopping
-    keep_prob_stat = 0.5
+    keep_prob_stat = 0.8
     learning_rate_stat = 1e-4
 
     # Initialize metrics for accuracy and mean iou

@@ -64,7 +64,7 @@ def maybe_download_pretrained_vgg(data_dir):
 
 def early_stopping(val_loss_history, patience):
     """
-    Returns true if the validation loss has increased at least `paitence` times in a row.
+    Returns true if the validation loss has increased at least `patience` times in a row.
     :param val_loss_history:
     :param patience: Number of times that val_loss is allowed to increase consecutively.
     :return:
