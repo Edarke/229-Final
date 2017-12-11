@@ -244,7 +244,7 @@ def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_st
                               batch_size, num_batches, data_set):
     get_train = True if data_set == "train" else False
 
-    confusion_matrix_sum = None
+    confusion_matrix_sum = np.array (0)
 
     for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=get_train), num_batches):
         num_images = images.shape[0]
@@ -258,7 +258,7 @@ def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_st
         labels_flattened = labels.reshape(-1)
 
         m = tf.contrib.metrics.confusion_matrix (labels_flattened, predicted_flattened).eval()
-        if confusion_matrix_sum == None:
+        if confusion_matrix_sum.any () == False:
             confusion_matrix_sum = m
         else:
             confusion_matrix_sum += m                
