@@ -82,7 +82,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
+    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,                                    
                                     kernel_initializer=tf.keras.initializers.he_uniform())
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
     # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
@@ -125,7 +125,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, num_classes, num_batches, class_to_ignore, verbose):
+             correct_label, keep_prob, learning_rate, num_classes, num_batches_train, class_to_ignore, verbose):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -185,7 +185,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             avg_loss = 0
 
             sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True), num_batches):
+            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True), num_batches_train):
                 num_images = images.shape[0]
 
                 _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
@@ -209,7 +209,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             n = 0
             val_loss = 0
             sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches):
+            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches_train):
                 num_images = images.shape[0]
                 loss, ologit = sess.run([cross_entropy_loss, logits],
                                         feed_dict={input_image: images,
@@ -236,17 +236,17 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                                       learning_rate, learning_rate_stat,
                                       correct_label, get_batches_fn,
                                       cross_entropy_loss, batch_size,
-                                      num_batches, "train")
+                                      num_batches_train, "train")
 
 def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
                               learning_rate, learning_rate_stat, correct_label,
                               get_batches_fn, cross_entropy_loss,
-                              batch_size, num_batches, data_set):
+                              batch_size, num_batches_train, data_set):
     get_train = True if data_set == "train" else False
 
     confusion_matrix_sum = np.array (0)
 
-    for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=get_train), num_batches):
+    for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=get_train), num_batches_train):
         num_images = images.shape[0]
         loss, ologit = sess.run([cross_entropy_loss, logits],
                                 feed_dict={input_image: images,
@@ -282,8 +282,11 @@ def run():
                         help='number of epochs')
     parser.add_argument('--batch_size', default=4, type=int,
                         help='batch size')
-    parser.add_argument('--num-batches', default=None, type=int,
-                        help='number of batches, only adjusted for testing')
+    parser.add_argument('--num-batches-train', default=None, type=int,
+                        help='number of train batches, only adjusted for testing')
+    parser.add_argument('--num-batches-dev', default=None, type=int,
+                        help='number of dev batches, only adjusted for testing')
+
     parser.add_argument('--fast', action='store_true',
                         help='runs for 1 batch with 1 epoch')
     parser.add_argument('--data-source', default='cityscapes',
@@ -314,7 +317,8 @@ def run():
     fast_run = args.fast
     verbose = not args.quiet
     data_set = args.data_source
-    num_batches = args.num_batches
+    num_batches_train = args.num_batches_train
+    num_batches_dev = args.num_batches_dev
     use_classes = args.use_classes
     num_classes = 0
     class_to_ignore = 0
@@ -355,7 +359,7 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate, num_classes, num_batches, class_to_ignore, verbose)
+                 keep_prob, learning_rate, num_classes, num_batches_train, class_to_ignore, verbose)
 
         if (args.save_test):
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
