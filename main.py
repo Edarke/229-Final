@@ -304,14 +304,14 @@ def run():
                         help='If true, predict cityscape classes instead of categories')
     parser.add_argument('--scale-factor', default=4, type=int,
                         help="Scales image down on each dimension")
-    parser.add_argument('--save-train', default=False,
-                        help="If true, saves output train images with labels")
-    parser.add_argument('--save-test', default=False,
-                        help="If true, saves output test images with labels")
-    parser.add_argument('--quiet', '-q', default=False, type=bool,
-                        help='If true, does not print batch updates')
-    parser.add_argument('--early-stop', default=True, type=bool,
-                        help='If false, will not early stop')
+    parser.add_argument('--save-train', action='store_true',
+                        help="If ON, saves output train images with labels")
+    parser.add_argument('--save-test', action='store_true',
+                        help="If ON, saves output test images with labels")
+    parser.add_argument('--quiet', '-q', action='store_true',
+                        help='If ON, does not print batch updates')
+    parser.add_argument('--no-early-stop', action='store_true',
+                        help='If ON, will not early stop')
 
 
     args = parser.parse_args()
@@ -334,7 +334,7 @@ def run():
     use_classes = args.use_classes
     num_classes = 0
     class_to_ignore = 0
-    early_stop = args.early_stop
+    early_stop = args.no_early_stop
 
     if data_set == "cityscapes":
         if use_classes:
