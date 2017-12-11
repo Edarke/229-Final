@@ -334,7 +334,7 @@ def run():
     use_classes = args.use_classes
     num_classes = 0
     class_to_ignore = 0
-    early_stop = args.no_early_stop
+    early_stop = not args.no_early_stop
 
     if data_set == "cityscapes":
         if use_classes:
