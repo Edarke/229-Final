@@ -83,7 +83,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
-                                    kernel_initializer=tf.keras.initializers.he_uniform())
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
     # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
 
