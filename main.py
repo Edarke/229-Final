@@ -82,8 +82,9 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,                                    
-                                    kernel_initializer=tf.keras.initializers.he_uniform())
+
+    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
     # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
 
@@ -125,7 +126,8 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, num_classes, num_batches_train, class_to_ignore, verbose):
+             correct_label, keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, 
+             early_stop, class_to_ignore, verbose):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -209,7 +211,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             n = 0
             val_loss = 0
             sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches_train):
+            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches_dev):
                 num_images = images.shape[0]
                 loss, ologit = sess.run([cross_entropy_loss, logits],
                                         feed_dict={input_image: images,
@@ -226,17 +228,24 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 epoch + 1, epochs, val_loss, val_accuracy, val_iou))
 
             val_loss_history.append(val_loss)
-            if helper.early_stopping(val_loss_history, patience):
+            if early_stop and helper.early_stopping(val_loss_history, patience):
                 print("Early stopping. Min Val Loss:", min(val_loss_history))
                 break
 
 
-        for s in ["train", "val"]:
-            compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
-                                      learning_rate, learning_rate_stat,
-                                      correct_label, get_batches_fn,
-                                      cross_entropy_loss, batch_size,
-                                      num_batches_train, "train")
+
+        compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
+                                  learning_rate, learning_rate_stat,
+                                  correct_label, get_batches_fn,
+                                  cross_entropy_loss, batch_size,
+                                  num_batches_train, "train")
+
+        compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
+                                  learning_rate, learning_rate_stat,
+                                  correct_label, get_batches_fn,
+                                  cross_entropy_loss, batch_size,
+                                  num_batches_dev, "dev")
+
 
 def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
                               learning_rate, learning_rate_stat, correct_label,
@@ -301,6 +310,9 @@ def run():
                         help="If true, saves output test images with labels")
     parser.add_argument('--quiet', '-q', default=False, type=bool,
                         help='If true, does not print batch updates')
+    parser.add_argument('--early-stop', default=True, type=bool,
+                        help='If false, will not early stop')
+
 
     args = parser.parse_args()
 
@@ -322,6 +334,7 @@ def run():
     use_classes = args.use_classes
     num_classes = 0
     class_to_ignore = 0
+    early_stop = args.early_stop
 
     if data_set == "cityscapes":
         if use_classes:
@@ -359,7 +372,7 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate, num_classes, num_batches_train, class_to_ignore, verbose)
+                 keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore, verbose)
 
         if (args.save_test):
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
