@@ -1,61 +1,28 @@
-Epoch 1 of 200, Batch 744: Batch loss 0.8730, Batch accuracy 0.6888, Avg loss: 1.3571, Avg accuracy: 0.6888,  Avg iou: 0.30742
-Epoch 1 of 200: Final Training loss: 1.3571, Final Training accuracy: 0.6888, Final Training iou: 0.3074
-Epoch 1 of 200: Val loss 0.6911, Val accuracy 0.7843, Val iou 0.4181
-Epoch 2 of 200, Batch 744: Batch loss 0.7900, Batch accuracy 0.8330, Avg loss: 0.5457, Avg accuracy: 0.8330,  Avg iou: 0.4540
-Epoch 2 of 200: Final Training loss: 0.5457, Final Training accuracy: 0.8330, Final Training iou: 0.4540
-Epoch 2 of 200: Val loss 0.6028, Val accuracy 0.8104, Val iou 0.4603
-Epoch 3 of 200, Batch 744: Batch loss 0.7013, Batch accuracy 0.8519, Avg loss: 0.4775, Avg accuracy: 0.8519,  Avg iou: 0.4907
-Epoch 3 of 200: Final Training loss: 0.4775, Final Training accuracy: 0.8519, Final Training iou: 0.4907
-Epoch 3 of 200: Val loss 0.5730, Val accuracy 0.8218, Val iou 0.4938
-Epoch 4 of 200, Batch 744: Batch loss 0.6267, Batch accuracy 0.8626, Avg loss: 0.4396, Avg accuracy: 0.8626,  Avg iou: 0.5180
-Epoch 4 of 200: Final Training loss: 0.4396, Final Training accuracy: 0.8626, Final Training iou: 0.5180
-Epoch 4 of 200: Val loss 0.5619, Val accuracy 0.8284, Val iou 0.5141
-Epoch 5 of 200, Batch 744: Batch loss 0.6036, Batch accuracy 0.8705, Avg loss: 0.4117, Avg accuracy: 0.8705,  Avg iou: 0.5368
-Epoch 5 of 200: Final Training loss: 0.4117, Final Training accuracy: 0.8705, Final Training iou: 0.5368
-Epoch 5 of 200: Val loss 0.5632, Val accuracy 0.8340, Val iou 0.5279
-Epoch 6 of 200, Batch 744: Batch loss 0.5761, Batch accuracy 0.8767, Avg loss: 0.3889, Avg accuracy: 0.8767,  Avg iou: 0.5510
-Epoch 6 of 200: Final Training loss: 0.3889, Final Training accuracy: 0.8767, Final Training iou: 0.5510
-Epoch 6 of 200: Val loss 0.5375, Val accuracy 0.8400, Val iou 0.5392
-Epoch 7 of 200, Batch 744: Batch loss 0.5713, Batch accuracy 0.8819, Avg loss: 0.3695, Avg accuracy: 0.8819,  Avg iou: 0.5634
-Epoch 7 of 200: Final Training loss: 0.3695, Final Training accuracy: 0.8819, Final Training iou: 0.5634
-Epoch 7 of 200: Val loss 0.5243, Val accuracy 0.8437, Val iou 0.5468
-Epoch 8 of 200, Batch 744: Batch loss 0.5403, Batch accuracy 0.8865, Avg loss: 0.3516, Avg accuracy: 0.8865,  Avg iou: 0.5755
-Epoch 8 of 200: Final Training loss: 0.3516, Final Training accuracy: 0.8865, Final Training iou: 0.5755
-Epoch 8 of 200: Val loss 0.5143, Val accuracy 0.8482, Val iou 0.5574
-Epoch 9 of 200, Batch 744: Batch loss 0.4715, Batch accuracy 0.8906, Avg loss: 0.3361, Avg accuracy: 0.8906,  Avg iou: 0.5858
-Epoch 9 of 200: Final Training loss: 0.3361, Final Training accuracy: 0.8906, Final Training iou: 0.5858
-Epoch 9 of 200: Val loss 0.5063, Val accuracy 0.8493, Val iou 0.5631
-Epoch 10 of 200, Batch 744: Batch loss 0.4796, Batch accuracy 0.8943, Avg loss: 0.3231, Avg accuracy: 0.8943,  Avg iou: 0.5951
-Epoch 10 of 200: Final Training loss: 0.3231, Final Training accuracy: 0.8943, Final Training iou: 0.5951
-Epoch 10 of 200: Val loss 0.5175, Val accuracy 0.8509, Val iou 0.5714
-Epoch 11 of 200, Batch 744: Batch loss 0.4349, Batch accuracy 0.8986, Avg loss: 0.3086, Avg accuracy: 0.8986,  Avg iou: 0.6041
-Epoch 11 of 200: Final Training loss: 0.3086, Final Training accuracy: 0.8986, Final Training iou: 0.6041
-Epoch 11 of 200: Val loss 0.4953, Val accuracy 0.8530, Val iou 0.5781
-Epoch 12 of 200, Batch 744: Batch loss 0.4815, Batch accuracy 0.9016, Avg loss: 0.2995, Avg accuracy: 0.9016,  Avg iou: 0.6091
-Epoch 12 of 200: Final Training loss: 0.2995, Final Training accuracy: 0.9016, Final Training iou: 0.6091
-Epoch 12 of 200: Val loss 0.5101, Val accuracy 0.8542, Val iou 0.5809
-Epoch 13 of 200, Batch 744: Batch loss 0.4040, Batch accuracy 0.9052, Avg loss: 0.2870, Avg accuracy: 0.9052,  Avg iou: 0.6174
-Epoch 13 of 200: Final Training loss: 0.2870, Final Training accuracy: 0.9052, Final Training iou: 0.6174
-Epoch 13 of 200: Val loss 0.5095, Val accuracy 0.8578, Val iou 0.5862
-Epoch 14 of 200, Batch 744: Batch loss 0.4286, Batch accuracy 0.9082, Avg loss: 0.2758, Avg accuracy: 0.9082,  Avg iou: 0.6228
-Epoch 14 of 200: Final Training loss: 0.2758, Final Training accuracy: 0.9082, Final Training iou: 0.6228
-Epoch 14 of 200: Val loss 0.4837, Val accuracy 0.8591, Val iou 0.5889
-Epoch 15 of 200, Batch 744: Batch loss 0.3695, Batch accuracy 0.9117, Avg loss: 0.2644, Avg accuracy: 0.9117,  Avg iou: 0.6287
-Epoch 15 of 200: Final Training loss: 0.2644, Final Training accuracy: 0.9117, Final Training iou: 0.6287
-Epoch 15 of 200: Val loss 0.4713, Val accuracy 0.8636, Val iou 0.5936
-Epoch 16 of 200, Batch 744: Batch loss 0.3567, Batch accuracy 0.9146, Avg loss: 0.2543, Avg accuracy: 0.9146,  Avg iou: 0.6340
-Epoch 16 of 200: Final Training loss: 0.2543, Final Training accuracy: 0.9146, Final Training iou: 0.6340
-Epoch 16 of 200: Val loss 0.4876, Val accuracy 0.8669, Val iou 0.5956
-tch loss 0.4040, Batch accuracy 0.9052, Avg loss: 0.2870, Avg accuracy: 0.9052,  Avg iou: 0.6174cy: 0.9328,  Avg iou: 0.6507
-Epoch 13 of 200: Final Training loss: 0.2870, Final Training accuracy: 0.9052, Final Training iou: 0.6174
-Epoch 13 of 200: Val loss 0.5095, Val accuracy 0.8578, Val iou 0.5862
-Epoch 14 of 200, Batch 744: Batch loss 0.4286, Batch accuracy 0.9082, Avg loss: 0.2758, Avg accuracy: 0.9082,  Avg iou: 0.6228
-Epoch 14 of 200: Final Training loss: 0.2758, Final Training accuracy: 0.9082, Final Training iou: 0.6228
-Epoch 14 of 200: Val loss 0.4837, Val accuracy 0.8591, Val iou 0.5889
-Epoch 15 of 200, Batch 744: Batch loss 0.3695, Batch accuracy 0.9117, Avg loss: 0.2644, Avg accuracy: 0.9117,  Avg iou: 0.6287
-Epoch 15 of 200: Final Training loss: 0.2644, Final Training accuracy: 0.9117, Final Training iou: 0.6287
-Epoch 15 of 200: Val loss 0.4713, Val accuracy 0.8636, Val iou 0.5936
-Epoch 16 of 200, Batch 744: Batch loss 0.3567, Batch accuracy 0.9146, Avg loss: 0.2543, Avg accuracy: 0.9146,  Avg iou: 0.6340
-Epoch 16 of 200: Final Training loss: 0.2543, Final Training accuracy: 0.9146, Final Training iou: 0.6340
-Epoch 16 of 200: Val loss 0.4876, Val accuracy 0.8669, Val iou 0.5956
-Epoch 17 of 200, Batch 104: Batch loss 0.1722, Batch accuracy 0.9225, Avg loss: 0.2307, Avg accuracy: 0.9225,  Avg iou: 0.6300
+Epochs	Train Loss	Val Loss	Train Accuracy	Val Accuracy	Train iou	Val iou
+1	1.357062	0.691078	0.688833	0.784283	0.307420	0.418091
+2	0.545653	0.602827	0.833005	0.810376	0.453994	0.460319
+3	0.477490	0.572974	0.851861	0.821760	0.490664	0.493785
+4	0.439594	0.561940	0.862574	0.828351	0.518009	0.514053
+5	0.411709	0.563204	0.870459	0.834045	0.536753	0.527916
+6	0.388866	0.537457	0.876702	0.839991	0.551040	0.539170
+7	0.369478	0.524259	0.881893	0.843745	0.563373	0.546818
+8	0.351598	0.514343	0.886476	0.848163	0.575548	0.557375
+9	0.336122	0.506316	0.890604	0.849277	0.585834	0.563150
+10	0.323118	0.517529	0.894287	0.850916	0.595102	0.571370
+11	0.308591	0.495262	0.898578	0.853036	0.604119	0.578067
+12	0.299487	0.510120	0.901554	0.854226	0.609145	0.580885
+13	0.286981	0.509541	0.905165	0.857751	0.617449	0.586216
+14	0.275769	0.483665	0.908154	0.859107	0.622810	0.588940
+15	0.264366	0.471283	0.911697	0.863619	0.628670	0.593570
+16	0.254264	0.487571	0.914587	0.866934	0.634021	0.595595
+17	0.251152	0.478993	0.915379	0.861884	0.635271	0.592001
+18	0.240269	0.457756	0.918943	0.869632	0.640640	0.596324
+19	0.228221	0.454786	0.922526	0.874351	0.646266	0.604038
+20	0.219057	0.475321	0.925440	0.874797	0.651257	0.603212
+21	0.215849	0.481212	0.926527	0.877488	0.653415	0.605787
+22	0.213811	0.502166	0.926993	0.879189	0.654807	0.604674
+23	0.212641	0.490614	0.927227	0.879184	0.656143	0.602764
+24	0.202513	0.501774	0.930452	0.879616	0.660648	0.602113
+25	0.200384	0.433839	0.931422	0.865496	0.662659	0.585402
+26	0.194179	0.483268	0.932916	0.882207	0.665487	0.601612
+27	0.184455	0.511408	0.936033	0.880937	0.670732	0.596896
