@@ -58,7 +58,7 @@ def load_vgg(sess, vgg_path):
 tests.test_load_vgg(load_vgg, tf)
 
 
-def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob):
+def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob, reg):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
     :param vgg_layer7_out: TF Tensor for VGG Layer 3 output
@@ -67,30 +67,40 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+
+    reg_lambda = .001
+
     conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1,
-                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
+
     # transposed convolutions - upsample by 2
     deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4, 2, 'SAME',
-                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                          kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
     # deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     # skip connection to previous VGG layer
     skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
-                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                    kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
     #skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
 
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
-                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                          kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
 
     skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
-                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                    kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
     # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
 
     # Upsample by 8 (three pooling layers in VGG encoder)
     deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
-                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                          kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
     return deconv_3
 
 
@@ -316,6 +326,8 @@ def run():
                         help='If ON, does not print batch updates')
     parser.add_argument('--no-early-stop', action='store_true',
                         help='If ON, will not early stop')
+    parser.add_argument('--reg', action='store_true',
+                        help='If ON, will regularize')
     parser.add_argument('--use-extra', action='store_true',
                         help='If ON, will use extras provided there is data inside /data/leftImg8bits/train_extra')
     
@@ -343,6 +355,7 @@ def run():
     class_to_ignore = 0
     early_stop = not args.no_early_stop
     use_extra = args.use_extra
+    reg = args.reg
 
     if data_set == "cityscapes":
         if use_classes:
@@ -370,7 +383,7 @@ def run():
         # Build NN using load_vgg, layers, and optimize function
         image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
         # Fully Convolutional Network
-        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob)
+        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob, reg)
         correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None))
         learning_rate = tf.placeholder(dtype=tf.float32)
 
