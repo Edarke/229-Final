@@ -83,7 +83,7 @@ def gen_batch_function(data_folder, image_shape):
     :return:
     """
 
-    def get_batches_fn(batch_size, get_train=True):
+    def get_batches_fn(batch_size, get_train=True, use_extra = False):
         subfolder = "train" if get_train else "val"
         """
         Create batches of training data
@@ -91,10 +91,21 @@ def gen_batch_function(data_folder, image_shape):
         :param batch_size: Batch Size
         :return: Batches of training data
         """
-        image_paths = glob(os.path.join("data", "leftImg8bit", subfolder, '**/*bit.png'))
-        label_paths = {
+        image_paths = []
+        label_paths = {}
+        #For train subfolders, first add the extras
+        if (use_extra and subfolder == "train"):
+            image_paths = glob(os.path.join("data", "leftImg8bit", subfolder + "_extra", '**/*bit.png'))
+            label_paths = {
+                re.sub("gtCoarse/", "leftImg8bit/", re.sub('_gtCoarse_labelIds', '_leftImg8bit', path)): path
+                for path in glob(os.path.join("data", 'gtCoarse', subfolder + "_extra", '**/*Ids.png'))}
+        
+        image_paths += glob(os.path.join("data", "leftImg8bit", subfolder, '**/*bit.png'))
+        label_paths.update ({
             re.sub("gtFine/", "leftImg8bit/", re.sub('_gtFine_labelIds', '_leftImg8bit', path)): path
-            for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))}
+            for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))})
+
+        print ("Total images: " + str(len(image_paths)) + " Total labels: " + str(len(label_paths)))
 
         for batch_i in range(0, int(len(image_paths)), batch_size):
             images = []
