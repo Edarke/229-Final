@@ -140,6 +140,8 @@ def gen_test_output(sess, logits, keep_prob, image_pl, image_shape, data_set):
         path = "data/leftImg8bit/test/**/*.png"
     elif data_set == "train":
         path = "data/leftImg8bit/train/**/*.png"
+    elif data_set == "val":
+        path = "data/leftImg8bit/val/**/*.png"
     else:
         raise Exception("Folder not recognized") 
         
