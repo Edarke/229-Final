@@ -77,7 +77,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
-    #skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
+    # skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
 
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
@@ -126,8 +126,8 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, 
-             early_stop, class_to_ignore, verbose):
+             correct_label, keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev,
+             early_stop, class_to_ignore, print_confusion, verbose):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -221,39 +221,38 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
                 _, val_accuracy, val_iou = update_metrics(labels, ologit, class_to_ignore)
                 val_loss = (n * val_loss + loss) / (n + 1)
                 n += 1
-                
+
             print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (
                 epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
             print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (
                 epoch + 1, epochs, val_loss, val_accuracy, val_iou))
-
+            data.flush()
             val_loss_history.append(val_loss)
             if early_stop and helper.early_stopping(val_loss_history, patience):
                 print("Early stopping. Min Val Loss:", min(val_loss_history))
                 break
 
+        if print_confusion:
+            compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
+                                     learning_rate, learning_rate_stat,
+                                     correct_label, get_batches_fn,
+                                     cross_entropy_loss, batch_size,
+                                     num_batches_train, "train")
+
+            compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
+                                     learning_rate, learning_rate_stat,
+                                     correct_label, get_batches_fn,
+                                     cross_entropy_loss, batch_size,
+                                     num_batches_dev, "dev")
 
 
-        compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
-                                  learning_rate, learning_rate_stat,
-                                  correct_label, get_batches_fn,
-                                  cross_entropy_loss, batch_size,
-                                  num_batches_train, "train")
-
-        compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
-                                  learning_rate, learning_rate_stat,
-                                  correct_label, get_batches_fn,
-                                  cross_entropy_loss, batch_size,
-                                  num_batches_dev, "dev")
-
-
-def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_stat,
-                              learning_rate, learning_rate_stat, correct_label,
-                              get_batches_fn, cross_entropy_loss,
-                              batch_size, num_batches_train, data_set):
+def compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
+                             learning_rate, learning_rate_stat, correct_label,
+                             get_batches_fn, cross_entropy_loss,
+                             batch_size, num_batches_train, data_set):
     get_train = True if data_set == "train" else False
 
-    confusion_matrix_sum = np.array (0)
+    confusion_matrix_sum = np.array(0)
 
     for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=get_train), num_batches_train):
         num_images = images.shape[0]
@@ -262,24 +261,24 @@ def compute_confusion_matrix (sess, logits, input_image, keep_prob, keep_prob_st
                                            correct_label: labels,
                                            keep_prob: keep_prob_stat,
                                            learning_rate: learning_rate_stat})
-                                           
+
         predicted_flattened = np.argmax(ologit, axis=1).reshape(-1)
         labels_flattened = labels.reshape(-1)
 
-        m = tf.contrib.metrics.confusion_matrix (labels_flattened, predicted_flattened).eval()
-        if confusion_matrix_sum.any () == False:
+        m = tf.contrib.metrics.confusion_matrix(labels_flattened, predicted_flattened).eval()
+        if confusion_matrix_sum.any() == False:
             confusion_matrix_sum = m
         else:
-            confusion_matrix_sum += m                
+            confusion_matrix_sum += m
 
-        confusion_matrix_sum += tf.contrib.metrics.confusion_matrix (labels_flattened, predicted_flattened).eval()
-        
-    row_sum = np.sum (confusion_matrix_sum, axis = 1, keepdims = True)
+        confusion_matrix_sum += tf.contrib.metrics.confusion_matrix(labels_flattened, predicted_flattened).eval()
+
+    row_sum = np.sum(confusion_matrix_sum, axis=1, keepdims=True)
 
     confusion_matrix_prob = confusion_matrix_sum / row_sum
 
-    print ("For dataset " + data_set)
-    print (confusion_matrix_prob)              
+    print("For dataset " + data_set)
+    print(confusion_matrix_prob)
 
 
 # tests.test_train_nn(train_nn)
@@ -312,7 +311,8 @@ def run():
                         help='If ON, does not print batch updates')
     parser.add_argument('--no-early-stop', action='store_true',
                         help='If ON, will not early stop')
-
+    parser.add_argument('--should-crop', action='store_true')
+    parser.add_argument('--print-confusion', action='store_true')
 
     args = parser.parse_args()
 
@@ -332,6 +332,9 @@ def run():
     num_batches_train = args.num_batches_train
     num_batches_dev = args.num_batches_dev
     use_classes = args.use_classes
+    should_crop = args.should_crop
+    print_confusion = args.print_confusion
+
     num_classes = 0
     class_to_ignore = 0
     early_stop = args.no_early_stop
@@ -349,12 +352,12 @@ def run():
     helper.maybe_download_pretrained_vgg(data_dir)
     label_util.init(use_classes)
 
-
     with tf.Session() as sess:
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
-        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
+        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape,
+                                                   should_crop)
 
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
@@ -372,14 +375,16 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore, verbose)
-
+                 keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
+                 print_confusion, verbose)
+        print('Save Test', args.save_test, 'Save Train', args.save_train)
         if (args.save_test):
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
         if (args.save_train):
-            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "train")
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input,
+                                          "train")
 
-        # OPTIONAL: Apply the trained model to a video
+            # OPTIONAL: Apply the trained model to a video
 
 
 if __name__ == '__main__':
