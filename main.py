@@ -125,7 +125,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
 tests.test_optimize(optimize)
 
 
-def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
+def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
              correct_label, keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev,
              early_stop, class_to_ignore, print_confusion, verbose):
     """
@@ -187,7 +187,8 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_e
             avg_loss = 0
 
             sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True), num_batches_train):
+            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True, use_extra=use_extra),
+                                                   num_batches_train):
                 num_images = images.shape[0]
 
                 _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
@@ -307,12 +308,18 @@ def run():
                         help="If ON, saves output train images with labels")
     parser.add_argument('--save-test', action='store_true',
                         help="If ON, saves output test images with labels")
+    parser.add_argument('--save-val', action='store_true',
+                        help="If ON, saves output val images with labels")
+    parser.add_argument('--save-all-images', action='store_true',
+                        help="If ON, saves all train test val images with labels")
     parser.add_argument('--quiet', '-q', action='store_true',
                         help='If ON, does not print batch updates')
     parser.add_argument('--no-early-stop', action='store_true',
                         help='If ON, will not early stop')
     parser.add_argument('--should-crop', action='store_true')
     parser.add_argument('--print-confusion', action='store_true')
+    parser.add_argument('--use-extra', action='store_true',
+                        help='If ON, will use extras provided there is data inside /data/leftImg8bits/train_extra')
 
     args = parser.parse_args()
 
@@ -337,7 +344,8 @@ def run():
 
     num_classes = 0
     class_to_ignore = 0
-    early_stop = args.no_early_stop
+    early_stop = not args.no_early_stop
+    use_extra = args.use_extra
 
     if data_set == "cityscapes":
         if use_classes:
@@ -373,16 +381,18 @@ def run():
 
         # Train NN using the train_nn function
         sess.run(tf.global_variables_initializer())
-        train_nn(sess, epochs, batch_size, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
+        train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
                  keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
                  print_confusion, verbose)
-        print('Save Test', args.save_test, 'Save Train', args.save_train)
-        if (args.save_test):
+
+        if args.save_test or args.save_all_images:
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
-        if (args.save_train):
+        if args.save_train or args.save_all_images:
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input,
                                           "train")
+        if args.save_val or args.save_all_images:
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "val")
 
             # OPTIONAL: Apply the trained model to a video
 
