@@ -75,13 +75,38 @@ def early_stopping(val_loss_history, patience):
     return True
 
 
-def gen_batch_function(data_folder, image_shape):
-    """
+def crop_center(img, startx, starty, width, height):
+    return img[starty:starty+height,startx:startx+width]
+
+
+def compute_label_frequency(image_paths, label_paths):
+    categories = np.array([*set(labels.id_to_trainId.values())], dtype=np.int)
+    counts = np.zeros(categories.shape[0] + 1)
+
+    print(categories)
+    for image_file in image_paths:
+        gt_image = scipy.misc.imread(label_paths[image_file])
+        gt_image = labels.id_to_trainId_map_func(gt_image)
+        gt_image = gt_image.flatten()
+        diff = np.setdiff1d(categories, gt_image)
+        for label in diff:
+            counts[label] += 1.
+
+    total_examples = float(len(image_paths))
+    for i in range(counts.shape[0]):
+        counts[i] = 1 - counts[i] / total_examples
+    print(counts)
+
+
+
+def gen_batch_function(data_folder, image_shape, should_crop):
+    """gt_image_file
     Generate function to create batches of training data
     :param data_folder: Path to folder that contains all the datasets
     :param image_shape: Tuple - Shape of image
     :return:
     """
+    print("Cropping images", should_crop)
 
     def get_batches_fn(batch_size, get_train=True, use_extra = False):
         subfolder = "train" if get_train else "val"
@@ -91,6 +116,9 @@ def gen_batch_function(data_folder, image_shape):
         :param batch_size: Batch Size
         :return: Batches of training data
         """
+        max_width, max_height = image_shape
+
+
         image_paths = []
         label_paths = {}
         #For train subfolders, first add the extras
@@ -105,16 +133,28 @@ def gen_batch_function(data_folder, image_shape):
             re.sub("gtFine/", "leftImg8bit/", re.sub('_gtFine_labelIds', '_leftImg8bit', path)): path
             for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))})
 
-        print ("Total images: " + str(len(image_paths)) + " Total labels: " + str(len(label_paths)))
+        print("Total images: " + str(len(image_paths)) + " Total labels: " + str(len(label_paths)))
+
+        # compute_label_frequency(image_paths, label_paths)
 
         for batch_i in range(0, int(len(image_paths)), batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i + batch_size]:
+
                 gt_image_file = label_paths[image_file]
 
-                image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape, interp="nearest")
-                gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape, interp="nearest")
+                image = scipy.misc.imread(image_file)
+                gt_image = scipy.misc.imread(gt_image_file)
+                if should_crop:
+                    orig_height, orig_width, _ = image.shape
+                    xoffset = np.random.randint(0, orig_width - max_width)
+                    yoffset = np.random.randint(0, orig_height - max_height)
+                    image = crop_center(image, xoffset, yoffset, max_width, max_height)
+                    gt_image = crop_center(gt_image, xoffset, yoffset, max_width, max_height)
+                else:
+                    image = scipy.misc.imresize(image, image_shape, interp="nearest")
+                    gt_image = scipy.misc.imresize(gt_image, image_shape, interp="nearest")
 
                 gt_image = labels.id_to_trainId_map_func(gt_image)
                 images.append(image)
@@ -140,6 +180,8 @@ def gen_test_output(sess, logits, keep_prob, image_pl, image_shape, data_set):
         path = "data/leftImg8bit/test/**/*.png"
     elif data_set == "train":
         path = "data/leftImg8bit/train/**/*.png"
+    elif data_set == "val":
+        path = "data/leftImg8bit/val/**/*.png"
     else:
         raise Exception("Folder not recognized") 
         
