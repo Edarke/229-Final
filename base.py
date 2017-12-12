@@ -124,28 +124,23 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
 
 tests.test_optimize(optimize)
 
+def train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
+                    num_classes, num_batches_train, num_batches_dev,
+                    early_stop, class_to_ignore, print_confusion, verbose):
 
-def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev,
-             early_stop, class_to_ignore, print_confusion, verbose):
     """
-    Train neural network and print out the loss during training.
+    Train baseline
     :param sess: TF Session
     :param epochs: Number of epochs
     :param batch_size: Batch size
     :param get_batches_fn: Function to get batches of training data.  Call using get_batches_fn(batch_size)
-    :param train_op: TF Operation to train the neural network
-    :param cross_entropy_loss: TF Tensor for the amount of loss
-    :param input_im	age: TF Placeholder for input images
-    :param correct_label: TF Placeholder for label images
-    :param keep_prob: TF Placeholder for dropout keep probability
-    :param learning_rate: TF Placeholder for learning rate
     """
     patience = 3  # number of times val_loss can increase before stopping
     keep_prob_stat = 0.8
     learning_rate_stat = 1e-4
 
-    # Initialize metrics for accuracy and mean iou
+    
+    #Initialize metrics for accuracy and mean iou
     tf_label = tf.placeholder(dtype=tf.int32, shape=[None, None])
     tf_prediction = tf.placeholder(dtype=tf.int32, shape=[None, None])
 
@@ -169,6 +164,7 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
         :param ologit: Predicted softmax values. shape = (batch_size, width * height)
         :return batch_accuracy, average_epoch_accuracy, avg_iou:
         """
+        '''
         flattened_labels = labels.astype(int).reshape([num_images, -1])
         flattened_mask = (flattened_labels != class_to_ignore).astype(int)
 
@@ -176,7 +172,11 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
         feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes, tf_iou_mask: flattened_mask}
         batch_accuracy, _ = sess.run([acc_update, tf_metric_update], feed_dict=feed_dict)
         avg_accuracy, avg_iou = sess.run([acc_metric, tf_metric])
+
         return batch_accuracy, avg_accuracy, avg_iou
+        '''
+        return 0, 0, 0
+    
 
     # Write metrics to data.txt for plotting later.
     with open("data.txt", "w") as data:
@@ -186,16 +186,16 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
             n = 0
             avg_loss = 0
 
-            sess.run(running_vars_initializer)
+            #sess.run(running_vars_initializer)
             for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True, use_extra=use_extra),
                                                    num_batches_train):
                 num_images = images.shape[0]
 
-                _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
-                                           feed_dict={input_image: images,
-                                                      correct_label: labels,
-                                                      keep_prob: keep_prob_stat,
-                                                      learning_rate: learning_rate_stat})
+
+                #INSERT TRAIN CODE HERE
+                loss = 0
+                ologit = [0]
+                
                 batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, ologit, class_to_ignore)
                 avg_loss = (avg_loss * n + loss) / (n + 1)
                 n += 1
@@ -214,11 +214,9 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
             sess.run(running_vars_initializer)
             for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches_dev):
                 num_images = images.shape[0]
-                loss, ologit = sess.run([cross_entropy_loss, logits],
-                                        feed_dict={input_image: images,
-                                                   correct_label: labels,
-                                                   keep_prob: keep_prob_stat,
-                                                   learning_rate: learning_rate_stat})
+                #INSERT INFER FOR DEV SET HERE
+                loss = 0
+                labels = [0]
                 _, val_accuracy, val_iou = update_metrics(labels, ologit, class_to_ignore)
                 val_loss = (n * val_loss + loss) / (n + 1)
                 n += 1
@@ -229,6 +227,7 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
                 epoch + 1, epochs, val_loss, val_accuracy, val_iou))
             data.flush()
             val_loss_history.append(val_loss)
+
             if early_stop and helper.early_stopping(val_loss_history, patience):
                 print("Early stopping. Min Val Loss:", min(val_loss_history))
                 break
@@ -280,9 +279,6 @@ def compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_sta
 
     print("For dataset " + data_set)
     print(confusion_matrix_prob)
-
-
-# tests.test_train_nn(train_nn)
 
 
 def run():
@@ -356,35 +352,27 @@ def run():
     elif data_set == "kitti":
         num_classes = NUM_CLASSES_KITTI
 
-    # Download pretrained vgg model
-    helper.maybe_download_pretrained_vgg(data_dir)
     label_util.init(use_classes)
 
     with tf.Session() as sess:
-        # Path to vgg model
-        vgg_path = os.path.join(data_dir, 'vgg')
-        # Create function to get batches
+
         get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape,
                                                    should_crop)
 
-        # OPTIONAL: Augment Images for better results
-        #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
-
         # Build NN using load_vgg, layers, and optimize function
-        image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
-        # Fully Convolutional Network
-        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob)
-        correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None))
-        learning_rate = tf.placeholder(dtype=tf.float32)
-
-        logits, train_op, cross_entropy_loss = optimize(last_layer, correct_label, learning_rate, num_classes)
 
         # Train NN using the train_nn function
         sess.run(tf.global_variables_initializer())
+
+        train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
+                        num_classes, num_batches_train, num_batches_dev,
+                        early_stop, class_to_ignore, print_confusion, verbose)
+        '''
         train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
                  keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
                  print_confusion, verbose)
+        '''
 
         if args.save_test or args.save_all_images:
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
