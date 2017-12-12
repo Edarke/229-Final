@@ -14,7 +14,7 @@ if __name__ == '__main__':
     else:
         file_name = sys.argv[1]
 
-        mat0 = genfromtxt(file_name)
+        mat0 = genfromtxt(file_name, delimiter="\t")
         for i in range(3, len(sys.argv)):
             plt.plot(mat0[:, 0], mat0[:, i - 2], label=sys.argv[i])
         plt.legend()
