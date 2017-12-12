@@ -68,7 +68,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
     :return: The Tensor for the last layer of output
     """
 
-    reg_lambda = .001
+    reg_lambda = 1
 
     conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1,
                                 kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
