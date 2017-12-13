@@ -14,6 +14,9 @@ import labels as label_util
 NUM_CLASSES_KITTI = 2
 NUM_CLASSES_CITYSCAPES = 20
 NUM_CATEGORIES_CITYSCAPES = 8
+SQUARE_DIM = 1 #3x3 is 9 pixels
+LEARNING_RATE = 0.5
+    
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -96,33 +99,25 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
 
 tests.test_layers(layers)
 
+    
+def gen_logistic_train_data (image, labels):
+    print (image.shape)
 
-def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
-    """
-    Build the TensorFLow loss and optimizer operations.
-    :param nn_last_layer: TF Tensor of the last layer in the neural network
-    :param correct_label: TF Placeholder for the correct label image
-    :param learning_rate: TF Placeholder for the learning rate
-    :param num_classes: Number of classes to classify
-    :return: Tuple of (logits, train_op, cross_entropy_loss)
-    """
-    # define logits and labels
-    print(num_classes)
-    logits = tf.reshape(nn_last_layer, (-1, num_classes))
-    labels = tf.to_int64(tf.reshape(correct_label, [-1]))
-    print(logits)
-    print(correct_label, labels)
-    # loss function
-    cross_entropy_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits))
-    # Optimizer
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-    # train_op = minimise loss
-    train_op = optimizer.minimize(cross_entropy_loss)
+    w, h, d = image.shape
 
-    return logits, train_op, cross_entropy_loss
+    print ("labels shape")
+    print (labels.shape)
+    batch_xs = []
+    batch_ys = labels.reshape (-1)
+    
+    #for a single pixel
+    for x in range (w):
+        for y in range (h):
+            f = [image[x][y][0], image[x][y][1], image[x][y][2]]
+            batch_xs.append (f)        
 
-
-tests.test_optimize(optimize)
+    assert (len (batch_xs) == len (batch_ys))
+    return batch_xs, batch_ys
 
 def train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
                     num_classes, num_batches_train, num_batches_dev,
@@ -138,7 +133,6 @@ def train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
     patience = 3  # number of times val_loss can increase before stopping
     keep_prob_stat = 0.8
     learning_rate_stat = 1e-4
-
     
     #Initialize metrics for accuracy and mean iou
     tf_label = tf.placeholder(dtype=tf.int32, shape=[None, None])
@@ -156,6 +150,21 @@ def train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
     running_vars = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="metric_.*")
     running_vars_initializer = tf.variables_initializer(var_list=running_vars)
 
+    pixels = 3*SQUARE_DIM**2
+    #For logistic regression
+    x = tf.placeholder(tf.float32, [None, pixels])
+    W = tf.Variable(tf.zeros([pixels, num_classes]))
+    b = tf.Variable(tf.zeros([num_classes]))
+    y_hat = tf.matmul(x, W) + b
+
+    y_in = tf.placeholder(tf.int32, [None])
+
+    cross_entropy = tf.reduce_mean(
+        tf.nn.sparse_softmax_cross_entropy_with_logits (labels=y_in,
+                                                        logits=y_hat))
+    
+    train_step = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cross_entropy)
+    
     def update_metrics(labels, ologit, class_to_ignore):
         """
         After a prediction, update the mean iou and accuracy scores.
@@ -186,28 +195,42 @@ def train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
             n = 0
             avg_loss = 0
 
-            #sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True, use_extra=use_extra),
-                                                   num_batches_train):
+            sess.run(running_vars_initializer)
+            for images, labels in itertools.islice (get_batches_fn(batch_size, get_train=True, use_extra=use_extra),
+                                                    num_batches_train):
                 num_images = images.shape[0]
 
-
-                #INSERT TRAIN CODE HERE
-                loss = 0
-                ologit = [0]
                 
+                print ("Number of images")
+                print (num_images)
+
+                assert (num_images == 1)                
+
+                batch_xs, batch_ys = gen_logistic_train_data (images[0], labels[0])
+                loss = sess.run (train_step, feed_dict={x: batch_xs, y_in: batch_ys})
+
+                print ("loss")
+                print (loss)
+                
+                '''
                 batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, ologit, class_to_ignore)
                 avg_loss = (avg_loss * n + loss) / (n + 1)
+                '''
                 n += 1
 
                 if verbose:
-                    # Overwrite last line of stdout on linux. Not sure if this works on windows...
+                    print ("end of batch " + n)
+                    '''
                     print(
                         "Epoch %d of %d, Batch %d: Batch loss %.4f, Batch accuracy %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
                             epoch + 1, epochs, n, loss, batch_accuracy, avg_loss, avg_accuracy, avg_iou), end="")
+                    '''
+
+            '''
             print(
                 "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
                     epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
+            
 
             n = 0
             val_loss = 0
@@ -231,6 +254,7 @@ def train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
             if early_stop and helper.early_stopping(val_loss_history, patience):
                 print("Early stopping. Min Val Loss:", min(val_loss_history))
                 break
+            '''
 
         if print_confusion:
             compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
@@ -285,7 +309,7 @@ def run():
     parser = argparse.ArgumentParser(description="Train and Infer FCN")
     parser.add_argument('--epochs', default=1, type=int,
                         help='number of epochs')
-    parser.add_argument('--batch_size', default=4, type=int,
+    parser.add_argument('--batch-size', default=1, type=int,
                         help='batch size')
     parser.add_argument('--num-batches-train', default=None, type=int,
                         help='number of train batches, only adjusted for testing')
@@ -362,17 +386,11 @@ def run():
         # Build NN using load_vgg, layers, and optimize function
 
         # Train NN using the train_nn function
-        sess.run(tf.global_variables_initializer())
+        sess.run (tf.global_variables_initializer())
 
         train_baseline (sess, epochs, batch_size, use_extra, get_batches_fn,
                         num_classes, num_batches_train, num_batches_dev,
                         early_stop, class_to_ignore, print_confusion, verbose)
-        '''
-        train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
-                 correct_label,
-                 keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
-                 print_confusion, verbose)
-        '''
 
         if args.save_test or args.save_all_images:
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")

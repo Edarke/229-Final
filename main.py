@@ -289,7 +289,7 @@ def run():
     parser = argparse.ArgumentParser(description="Train and Infer FCN")
     parser.add_argument('--epochs', default=1, type=int,
                         help='number of epochs')
-    parser.add_argument('--batch_size', default=4, type=int,
+    parser.add_argument('--batch-size', default=4, type=int,
                         help='batch size')
     parser.add_argument('--num-batches-train', default=None, type=int,
                         help='number of train batches, only adjusted for testing')
