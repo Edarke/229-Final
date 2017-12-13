@@ -35,6 +35,9 @@ def plot():
     elif args.mode == "loss":
         cols = ["Epochs", "Train Loss", "Val Loss"]
         y_label = "Loss"
+    elif args.mode == "size":
+        cols = ["Training Set Size", "Train Loss", "Val Loss"]
+        y_label = "Loss"
     elif args.mode == "custom":
         cols = args.cols
 
@@ -56,6 +59,8 @@ def plot():
     plt.legend (loc=0)
     plt.xlabel(labels[x_idx],fontsize=16)
     plt.ylabel(y_label,  fontsize=16)
+    if args.mode == "size":
+        plt.ylim(ymin=0)
     if args.title:
         plt.suptitle (args.title,fontsize=20)
     if args.show:
