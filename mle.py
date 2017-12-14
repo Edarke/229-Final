@@ -183,7 +183,7 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
                         for x in range((img.shape[1])):
                             color = np.zeros(3, dtype=np.int)
                             color = (img[y][x] + bucket_size//2) // bucket_size
-                            pred[y][x] = np.argmax(color_count[color[0], color[1], color[2]])
+                            pred[y][x] = 1 # np.argmax(color_count[color[0], color[1], color[2]])
                     preds.append(pred)
 
                     for y in range((img.shape[0])):

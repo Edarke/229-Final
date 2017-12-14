@@ -159,35 +159,7 @@ def train_baseline (sess, epochs, batch_size, window_size, use_extra, get_batche
                         "Epoch %d of %d, Batch %d: Batch loss %.4f, Batch accuracy %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
                             epoch + 1, epochs, n, loss, batch_accuracy, avg_loss, avg_accuracy, avg_iou), end="")
         
-
-            print(
-                "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
-                    epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
-            
-
-            n = 0
-            val_loss = 0
-            sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches_dev):
-                num_images = images.shape[0]
-
-                
-                batch_xs, batch_ys = gen_logistic_train_data (images, labels, window_size)
-                _ , loss, ologit = sess.run ([train_step, cross_entropy, logits], feed_dict={x: batch_xs, y_in: batch_ys})                            
-                _, val_accuracy, val_iou = update_metrics(labels, ologit, class_to_ignore)
-                val_loss = (n * val_loss + loss) / (n + 1)
-                n += 1
-
-            print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (
-                epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
-            print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (
-                epoch + 1, epochs, val_loss, val_accuracy, val_iou))
-            data.flush()
-            val_loss_history.append(val_loss)
-
-            if early_stop and helper.early_stopping(val_loss_history, patience):
-                print("Early stopping. Min Val Loss:", min(val_loss_history))
-                break
+            print('------------------------------------------')
 
 
         if print_confusion:
