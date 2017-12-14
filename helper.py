@@ -187,10 +187,20 @@ def gen_test_output(sess, logits, keep_prob, image_pl, image_shape, data_set):
     for image_file in glob(os.path.join(path)):
         image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
 
-        im_softmax = sess.run(
-            [tf.nn.softmax(logits)],
-            {keep_prob: 1.0, image_pl: [image]})[0]
-        mask = np.argmax(im_softmax, axis=1)
+        if keep_prob == None:
+           image = image.reshape(-1, 3)
+           im_softmax = sess.run ([tf.nn.softmax(logits)],
+                                  {image_pl: image})[0]
+           
+           image = image.reshape (image_shape[0], image_shape[1],  3)
+           mask = np.argmax (im_softmax, axis = 1)
+
+        else:
+            im_softmax = sess.run(
+                [tf.nn.softmax(logits)],
+                {keep_prob: 1.0, image_pl: [image]})[0]
+            mask = np.argmax(im_softmax, axis=1)
+            
         mask = mask.reshape([image_shape[0], image_shape[1]])
 
         mask2 = labels.get_color_matrix(mask)
