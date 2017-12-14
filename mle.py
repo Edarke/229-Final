@@ -2,7 +2,12 @@ import sys
 import argparse
 import os
 import os.path
+import scipy.misc
+
+import scipy
 import tensorflow as tf
+import time
+
 import helper
 import warnings
 import numpy as np
@@ -58,43 +63,13 @@ def load_vgg(sess, vgg_path):
 tests.test_load_vgg(load_vgg, tf)
 
 
-def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob):
-    """
-    Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
-    :param vgg_layer7_out: TF Tensor for VGG Layer 3 output
-    :param vgg_layer4_out: TF Tensor for VGG Layer 4 output
-    :param vgg_layer3_out: TF Tensor for VGG Layer 7 output
-    :param num_classes: Number of classes to classify
-    :return: The Tensor for the last layer of output
-    """
-    conv_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1,
-                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    # transposed convolutions - upsample by 2
-    deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4, 2, 'SAME',
-                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    # deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    # skip connection to previous VGG layer
-    skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
-                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    skip_conn_1 = tf.add(deconv_1, skip_layer_1)
-    # skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
-
-    # Upsample by 2
-    deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
-                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-
-    skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
-                                    kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    skip_conn_2 = tf.add(deconv_2, skip_layer_2)
-    # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
-
-    # Upsample by 8 (three pooling layers in VGG encoder)
-    deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
-                                          kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
-    return deconv_3
-
-
-tests.test_layers(layers)
+def layers(input, num_classes):
+    return tf.layers.conv2d(
+        input,
+        num_classes,
+        kernel_size=1,
+        padding="SAME",
+    )
 
 
 def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
@@ -161,7 +136,7 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
     running_vars = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope="metric_.*")
     running_vars_initializer = tf.variables_initializer(var_list=running_vars)
 
-    def update_metrics(labels, ologit, class_to_ignore):
+    def update_metrics(labels, preds, class_to_ignore):
         """
         After a prediction, update the mean iou and accuracy scores.
 
@@ -169,117 +144,68 @@ def train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_
         :param ologit: Predicted softmax values. shape = (batch_size, width * height)
         :return batch_accuracy, average_epoch_accuracy, avg_iou:
         """
+        print(labels.astype(int).reshape([4, -1]))
         flattened_labels = labels.astype(int).reshape([num_images, -1])
         flattened_mask = (flattened_labels != class_to_ignore).astype(int)
 
-        predicted_classes = np.argmax(ologit, axis=1).reshape([num_images, -1])
-        feed_dict = {tf_label: flattened_labels, tf_prediction: predicted_classes, tf_iou_mask: flattened_mask}
-        batch_accuracy, _ = sess.run([acc_update, tf_metric_update], feed_dict=feed_dict)
-        avg_accuracy, avg_iou = sess.run([acc_metric, tf_metric])
-        return batch_accuracy, avg_accuracy, avg_iou
+        # predicted_classes = np.argmax(ologit, axis=1).reshape([num_images, -1])
+        preds = np.reshape(preds, [num_images, -1])
+        feed_dict = {tf_label: flattened_labels, tf_prediction: preds, tf_iou_mask: flattened_mask}
+        sess.run([tf_metric_update], feed_dict=feed_dict)
+        avg_iou = sess.run([tf_metric])
+        return 0, 0, avg_iou
 
     # Write metrics to data.txt for plotting later.
+    class_count = np.zeros(num_classes)
+    bucket_size = 16
+    res = 256//bucket_size
+
+    color_count = np.ones([res, res, res, num_classes])
+    output_dir = os.path.join("runs", str(time.time()) + "/" + "evan")
+    os.makedirs(output_dir)
+
     with open("data.txt", "w") as data:
         print("Epochs\tTrain Loss\tVal Loss\tTrain Accuracy\tVal Accuracy\tTrain iou\tVal iou", file=data)
-        val_loss_history = [float("inf")]
-        for epoch in range(epochs):
+        for epoch in range(2):
             n = 0
-            avg_loss = 0
 
             sess.run(running_vars_initializer)
             for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=True, use_extra=use_extra),
                                                    num_batches_train):
                 num_images = images.shape[0]
 
-                _, loss, ologit = sess.run([train_op, cross_entropy_loss, logits],
-                                           feed_dict={input_image: images,
-                                                      correct_label: labels,
-                                                      keep_prob: keep_prob_stat,
-                                                      learning_rate: learning_rate_stat})
-                batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, ologit, class_to_ignore)
-                avg_loss = (avg_loss * n + loss) / (n + 1)
+
+                preds = []
+                for i, img in enumerate(images):
+                    pred = np.zeros((img.shape[0], img.shape[1]), dtype=np.int)
+
+                    for y in range((img.shape[0])):
+                        for x in range((img.shape[1])):
+                            color = np.zeros(3, dtype=np.int)
+                            color = (img[y][x] + bucket_size//2) // bucket_size
+                            pred[y][x] = np.argmax(color_count[color[0], color[1], color[2]])
+                    preds.append(pred)
+
+                    for y in range((img.shape[0])):
+                        for x in range((img.shape[1])):
+                            color = np.zeros(3, dtype=np.int)
+                            color = (img[y][x] + bucket_size//2) // bucket_size
+                            label = int(labels[i][y][x])
+                            class_count[label] += 1
+                            color_count[color[0], color[1], color[2], label] += 1
+                    if i == 0:
+                        mask2 = label_util.get_color_matrix(pred)
+                        mask = scipy.misc.toimage(mask2, mode="RGBA")
+                        street_im = scipy.misc.toimage(img)
+                        street_im.paste(mask, box=None, mask=mask)
+                        scipy.misc.imsave(os.path.join(output_dir, "example.png"), street_im)
+
+                batch_accuracy, avg_accuracy, avg_iou = update_metrics(labels, preds, class_to_ignore)
                 n += 1
-
-                if verbose:
-                    # Overwrite last line of stdout on linux. Not sure if this works on windows...
-                    print(
-                        "Epoch %d of %d, Batch %d: Batch loss %.4f, Batch accuracy %.4f, Avg loss: %.4f, Avg accuracy: %.4f,  Avg iou: %.4f\r" % (
-                            epoch + 1, epochs, n, loss, batch_accuracy, avg_loss, avg_accuracy, avg_iou), end="")
-            print(
-                "\nEpoch %d of %d: Final Training loss: %.4f, Final Training accuracy: %.4f, Final Training iou: %.4f" % (
-                    epoch + 1, epochs, avg_loss, avg_accuracy, avg_iou))
-
-            n = 0
-            val_loss = 0
-            sess.run(running_vars_initializer)
-            for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=False), num_batches_dev):
-                num_images = images.shape[0]
-                loss, ologit = sess.run([cross_entropy_loss, logits],
-                                        feed_dict={input_image: images,
-                                                   correct_label: labels,
-                                                   keep_prob: keep_prob_stat,
-                                                   learning_rate: learning_rate_stat})
-                _, val_accuracy, val_iou = update_metrics(labels, ologit, class_to_ignore)
-                val_loss = (n * val_loss + loss) / (n + 1)
-                n += 1
-
-            print("%d\t%f\t%f\t%f\t%f\t%f\t%f" % (
-                epoch + 1, avg_loss, val_loss, avg_accuracy, val_accuracy, avg_iou, val_iou), file=data)
-            print("Epoch %d of %d: Val loss %.4f, Val accuracy %.4f, Val iou %.4f" % (
-                epoch + 1, epochs, val_loss, val_accuracy, val_iou))
-            data.flush()
-            val_loss_history.append(val_loss)
-            if early_stop and helper.early_stopping(val_loss_history, patience):
-                print("Early stopping. Min Val Loss:", min(val_loss_history))
-                break
-
-        if print_confusion:
-            compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
-                                     learning_rate, learning_rate_stat,
-                                     correct_label, get_batches_fn,
-                                     cross_entropy_loss, batch_size,
-                                     num_batches_train, "train")
-
-            compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
-                                     learning_rate, learning_rate_stat,
-                                     correct_label, get_batches_fn,
-                                     cross_entropy_loss, batch_size,
-                                     num_batches_dev, "dev")
+                print("IOU", avg_iou)
+            print("End Epoch")
 
 
-def compute_confusion_matrix(sess, logits, input_image, keep_prob, keep_prob_stat,
-                             learning_rate, learning_rate_stat, correct_label,
-                             get_batches_fn, cross_entropy_loss,
-                             batch_size, num_batches_train, data_set):
-    get_train = True if data_set == "train" else False
-
-    confusion_matrix_sum = np.array(0)
-
-    for images, labels in itertools.islice(get_batches_fn(batch_size, get_train=get_train), num_batches_train):
-        num_images = images.shape[0]
-        loss, ologit = sess.run([cross_entropy_loss, logits],
-                                feed_dict={input_image: images,
-                                           correct_label: labels,
-                                           keep_prob: keep_prob_stat,
-                                           learning_rate: learning_rate_stat})
-
-        predicted_flattened = np.argmax(ologit, axis=1).reshape(-1)
-        labels_flattened = labels.reshape(-1)
-
-        m = tf.contrib.metrics.confusion_matrix(labels_flattened, predicted_flattened).eval()
-        if confusion_matrix_sum.any() == False:
-            confusion_matrix_sum = m
-        else:
-            confusion_matrix_sum += m
-
-        confusion_matrix_sum += tf.contrib.metrics.confusion_matrix(labels_flattened, predicted_flattened).eval()
-
-    row_sum = np.sum(confusion_matrix_sum, axis=1, keepdims=True)
-
-    confusion_matrix_prob = confusion_matrix_sum / row_sum
-
-    print("For dataset " + data_set)
-    print(confusion_matrix_prob)
 
 
 # tests.test_train_nn(train_nn)
@@ -289,7 +215,7 @@ def run():
     parser = argparse.ArgumentParser(description="Train and Infer FCN")
     parser.add_argument('--epochs', default=1, type=int,
                         help='number of epochs')
-    parser.add_argument('--batch-size', default=4, type=int,
+    parser.add_argument('--batch_size', default=4, type=int,
                         help='batch size')
     parser.add_argument('--num-batches-train', default=None, type=int,
                         help='number of train batches, only adjusted for testing')
@@ -372,9 +298,9 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # Build NN using load_vgg, layers, and optimize function
-        image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
+        image_input, _, _, _, _ = load_vgg(sess, vgg_path)
         # Fully Convolutional Network
-        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob)
+        last_layer = layers(image_input, num_classes)
         correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None))
         learning_rate = tf.placeholder(dtype=tf.float32)
 
@@ -384,16 +310,16 @@ def run():
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
-                 keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
+                 1., learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
                  print_confusion, verbose)
 
         if args.save_test or args.save_all_images:
-            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, 1., image_input, "test")
         if args.save_train or args.save_all_images:
-            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input,
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, 1., image_input,
                                           "train")
         if args.save_val or args.save_all_images:
-            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "val")
+            helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, 1., image_input, "val")
 
             # OPTIONAL: Apply the trained model to a video
 
