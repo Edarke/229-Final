@@ -74,40 +74,50 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_pro
                                 kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                 kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
 
+    r1 = tf.keras.regularizers.l2(reg_lambda) if reg else None
     # transposed convolutions - upsample by 2
     deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 4, 2, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                          kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
+                                          kernel_regularizer = r1)
+
+    r2 = tf.keras.regularizers.l2(reg_lambda) if reg else None
+        
     # deconv_1 = tf.layers.conv2d_transpose(conv_out, num_classes, 64,32, 'SAME', kernel_initializer=tf.truncated_normal_initializer(stddev=0.01))
     # skip connection to previous VGG layer
     skip_layer_1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                    kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
+                                    kernel_regularizer= r2)
     skip_conn_1 = tf.add(deconv_1, skip_layer_1)
     # skip_conn_1 = tf.layers.dropout(skip_conn_1, rate=keep_prob)
 
+    r3 = tf.keras.regularizers.l2(reg_lambda) if reg else None
     # Upsample by 2
     deconv_2 = tf.layers.conv2d_transpose(skip_conn_1, num_classes, 4, 2, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                          kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
+                                          kernel_regularizer= r3)
+
+    r4 = tf.keras.regularizers.l2(reg_lambda) if reg else None
 
     skip_layer_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, 1,
                                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                    kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
+                                    kernel_regularizer= r4)
+    
     skip_conn_2 = tf.add(deconv_2, skip_layer_2)
     # skip_conn_2 = tf.layers.dropout(skip_conn_2, rate=keep_prob)
+
+    r5 = tf.keras.regularizers.l2(reg_lambda) if reg else None
 
     # Upsample by 8 (three pooling layers in VGG encoder)
     deconv_3 = tf.layers.conv2d_transpose(skip_conn_2, num_classes, 16, 8, 'SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                          kernel_regularizer=tf.keras.regularizers.l2(reg_lambda) if reg else None)
-    return deconv_3
+                                          kernel_regularizer= r5)
+    return deconv_3, r1, r2, r3, r4, r5
 
 
 tests.test_layers(layers)
 
 
-def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
+def optimize(nn_last_layer, correct_label, learning_rate, num_classes, reg1, reg2, reg3, reg4, reg5):
     """
     Build the TensorFLow loss and optimizer operations.
     :param nn_last_layer: TF Tensor of the last layer in the neural network
@@ -127,7 +137,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     # Optimizer
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     # train_op = minimise loss
-    train_op = optimizer.minimize(cross_entropy_loss)
+    train_op = optimizer.minimize(cross_entropy_loss + reg1 + reg2 + reg3 + reg4 + reg5)
 
     return logits, train_op, cross_entropy_loss
 
@@ -386,18 +396,18 @@ def run():
         # Build NN using load_vgg, layers, and optimize function
         image_input, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
         # Fully Convolutional Network
-        last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob, reg)
+        last_layer, reg1, reg2, reg3, reg4, reg5 = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes, keep_prob, reg)
         correct_label = tf.placeholder(dtype=tf.float32, shape=(None, None, None))
         learning_rate = tf.placeholder(dtype=tf.float32)
 
-        logits, train_op, cross_entropy_loss = optimize(last_layer, correct_label, learning_rate, num_classes)
+        logits, train_op, cross_entropy_loss = optimize(last_layer, correct_label, learning_rate, num_classes, reg1, reg2, reg3, reg4, reg5)
 
         # Train NN using the train_nn function
         sess.run(tf.global_variables_initializer())
         train_nn(sess, epochs, batch_size, use_extra, get_batches_fn, logits, train_op, cross_entropy_loss, image_input,
                  correct_label,
                  keep_prob, learning_rate, num_classes, num_batches_train, num_batches_dev, early_stop, class_to_ignore,
-                 print_confusion, verbose)
+                 print_confusion, verbose, reg1, reg2, reg3, reg4, reg5)
 
         if args.save_test or args.save_all_images:
             helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input, "test")
