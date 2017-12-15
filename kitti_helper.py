@@ -108,7 +108,7 @@ def gen_batch_function(data_folder, image_shape, should_crop):
     print("Cropping images", should_crop)
 
     def get_batches_fn(batch_size, get_train=True, use_extra=False):
-        subfolder = "train" if get_train else "val"
+        subfolder = "training" if get_train else "trainings"
         """
         Create batches of training data
         :param get_train:
@@ -120,16 +120,17 @@ def gen_batch_function(data_folder, image_shape, should_crop):
         image_paths = []
         label_paths = {}
         # For train subfolders, first add the extras
-        if (use_extra and subfolder == "train"):
-            image_paths = glob(os.path.join("data", "leftImg8bit", subfolder + "_extra", '**/*bit.png'))
-            label_paths = {
-                re.sub("gtCoarse/", "leftImg8bit/", re.sub('_gtCoarse_labelIds', '_leftImg8bit', path)): path
-                for path in glob(os.path.join("data", 'gtCoarse', subfolder + "_extra", '**/*Ids.png'))}
-
-        image_paths += glob(os.path.join("data", "leftImg8bit", subfolder, '**/*bit.png'))
+        # if (use_extra and subfolder == "train"):
+        #     image_paths = glob(os.path.join("data", "leftImg8bit", subfolder + "_extra", '**/*bit.png'))
+        #     label_paths = {
+        #         re.sub("gtCoarse/", "leftImg8bit/", re.sub('_gtCoarse_labelIds', '_leftImg8bit', path)): path
+        #         for path in glob(os.path.join("data", 'gtCoarse', subfolder + "_extra", '**/*Ids.png'))}
+        #
+        image_paths += glob(os.path.join("data", "data_road", subfolder, 'gt_image_2', '*_road_*.png'))
         label_paths.update({
-            re.sub("gtFine/", "leftImg8bit/", re.sub('_gtFine_labelIds', '_leftImg8bit', path)): path
-            for path in glob(os.path.join("data", 'gtFine', subfolder, '**/*Ids.png'))})
+            re.sub('gt_image_2', 'image_2', re.sub('_road_', '_', path)): path
+            for path in image_paths})
+        image_paths = list(label_paths.keys())
 
         print("Total images: " + str(len(image_paths)) + " Total labels: " + str(len(label_paths)))
 
@@ -139,22 +140,22 @@ def gen_batch_function(data_folder, image_shape, should_crop):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i + batch_size]:
-
                 gt_image_file = label_paths[image_file]
 
                 image = scipy.misc.imread(image_file)
-                gt_image = scipy.misc.imread(gt_image_file)
-                if should_crop:
-                    orig_height, orig_width, _ = image.shape
-                    xoffset = np.random.randint(0, orig_width - max_width)
-                    yoffset = np.random.randint(0, orig_height - max_height)
-                    image = crop_center(image, xoffset, yoffset, max_width, max_height)
-                    gt_image = crop_center(gt_image, xoffset, yoffset, max_width, max_height)
-                else:
-                    image = scipy.misc.imresize(image, image_shape, interp="nearest")
-                    gt_image = scipy.misc.imresize(gt_image, image_shape, interp="nearest")
+                gt_image = (scipy.misc.imread(gt_image_file))
+                # if should_crop:
+                #     orig_height, orig_width, _ = image.shape
+                #     xoffset = np.random.randint(0, orig_width - max_width)
+                #     yoffset = np.random.randint(0, orig_height - max_height)
+                #     image = crop_center(image, xoffset, yoffset, max_width, max_height)
+                #     gt_image = crop_center(gt_image, xoffset, yoffset, max_width, max_height)
+                # elif False:
+                image = scipy.misc.imresize(image, (375, 1242), interp="nearest")
+                gt_image = scipy.misc.imresize(gt_image, (375, 1242), interp="nearest")
+                gt_image = (gt_image[:, :, 2] != 0).astype(int)
 
-                gt_image = labels.id_to_trainId_map_func(gt_image)
+                # gt_image = labels.id_to_trainId_map_func(gt_image)
                 images.append(image)
                 gt_images.append(gt_image)
             yield np.array(images), np.array(gt_images)
@@ -187,12 +188,12 @@ def gen_test_output(sess, logits, keep_prob, image_pl, image_shape, data_set):
         image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
 
         if keep_prob == None:
-            image = image.reshape(-1, 3)
-            im_softmax = sess.run([tf.nn.softmax(logits)],
+           image = image.reshape(-1, 3)
+           im_softmax = sess.run ([tf.nn.softmax(logits)],
                                   {image_pl: image})[0]
 
-            image = image.reshape(image_shape[0], image_shape[1], 3)
-            mask = np.argmax(im_softmax, axis=1)
+           image = image.reshape (image_shape[0], image_shape[1],  3)
+           mask = np.argmax (im_softmax, axis = 1)
 
         else:
             im_softmax = sess.run(

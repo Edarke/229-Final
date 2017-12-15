@@ -31,6 +31,7 @@ plt.ylim((0, 1))
 plt.show()
 
 
+# Values from helper.calculate_class_frequency()
 plt.bar(['void', 'flat', 'construction', 'object', 'nature', 'sky', 'human', 'vehicle'], [1.,  0.99193277,  0.99697479,  0.99327731,  0.97411765,  0.90285714,  0.84033613,  0.98689076])
 plt.title('Frequency of Categories in Training Set')
 plt.ylim((0, 1))
