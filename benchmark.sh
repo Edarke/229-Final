@@ -1,8 +1,8 @@
 #!/bin/bash
 
-for b in 32 64
+for b in 32 #64
 do
-    for d in 0 1 2 3
+    for d in 0 # 1 2 3
     do
         echo "Batch: "
         echo $b
