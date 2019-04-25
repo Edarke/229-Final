@@ -329,7 +329,7 @@ def run():
     image_shape = (1024 // args.scale_factor, 2048 // args.scale_factor)
     data_dir = './data'
     runs_dir = './runs'
-    tests.test_for_kitti_dataset(data_dir)
+    #tests.test_for_kitti_dataset(data_dir)
 
     epochs = args.epochs
     batch_size = args.batch_size
